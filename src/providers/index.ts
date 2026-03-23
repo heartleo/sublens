@@ -14,9 +14,9 @@ import type { SubscriptionProvider } from "./base";
 
 /** All registered providers. Add new ones here. */
 export const providers: SubscriptionProvider[] = [
-  cursorProvider,
-  copilotProvider,
   chatgptProvider,
   claudeProvider,
+  copilotProvider,
   googleOneProvider,
+  cursorProvider,
 ];
