@@ -1,26 +1,31 @@
 <h1 align="center">SubLens</h1>
 
 <p align="center">
-  Track all your AI subscriptions in one place — pricing and billing cycles at a glance.
+  Track all your AI subscriptions - pricing and billing cycles at a glance.
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/github/release/heartleo/sublens?logo=github" alt="GitHub Release" />
   <img src="https://img.shields.io/badge/chrome-%3E%3D88-brightgreen?logo=googlechrome&logoColor=white" alt="Chrome 88+" />
   <img src="https://img.shields.io/badge/manifest-v3-blue" alt="Manifest V3" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" width="380" alt="SubLens screenshot" />
+  <img src="docs/screenshot_dark.png" width="380" alt="SubLens Dark Mode" />
+  <img src="docs/screenshot_light.png" width="380" alt="SubLens Light Mode" />
 </p>
 
 ## Features
 
-- **Multi-provider dashboard** — Cursor, GitHub Copilot, ChatGPT, Claude, Google One
-- **Subscription cost tracking** — see plan pricing and total monthly spend
+- **Multi-provider dashboard** — ChatGPT, Claude, GitHub Copilot, Google One, Cursor
+- **Subscription cost tracking** — plan pricing, discounted/original price comparison, total monthly spend
 - **Billing cycle alerts** — next billing date and days remaining
+- **Toolbar badge** — paid subscription count displayed on the extension icon
 - **Drag-to-reorder** — arrange cards in your preferred order
 - **Dark / Light / System theme** — auto-follows OS preference
+- **Multi-language** — English and Simplified Chinese, with locale-aware date and price formatting
+- **Smart refresh** — auto-refreshes stale data (>10 min), background sync every 15 min, manual refresh via double-click logo
 - **Privacy-first** — all data stored locally, no external analytics
 
 ## Install
@@ -55,10 +60,18 @@ npm run build
 | Provider                                                         | Price | Billing Cycle |
 | ---------------------------------------------------------------- | ----- | ------------- |
 | <img src="public/logos/chatgpt.svg" width="16" /> ChatGPT        | Yes   | Yes           |
-| <img src="public/logos/claude.svg" width="16" /> Claude          | Yes   | —             |
+| <img src="public/logos/claude.svg" width="16" /> Claude          | Yes   | Yes           |
 | <img src="public/logos/copilot.svg" width="16" /> GitHub Copilot | Yes   | Yes           |
+| <img src="public/logos/googleone.svg" width="16" /> Google One   | Yes   | Yes           |
 | <img src="public/logos/cursor.svg" width="16" /> Cursor          | Yes   | Yes           |
-| <img src="public/logos/googleone.svg" width="16" /> Google One   | Yes   | —             |
+
+## Usage Tips
+
+- **Double-click the SubLens logo** to manually refresh all subscriptions
+- **Double-click a subscription card** to open the service's dashboard
+- **Double-click the "Paid" counter** to highlight paid subscriptions
+- **Click the language button** (EN/ZH) to switch between English and Chinese
+- **Drag cards** to reorder them — your order is saved automatically
 
 ## Development
 
@@ -71,8 +84,20 @@ npm run lint         # ESLint
 npm run format       # Prettier
 ```
 
+### Adding a New Provider
+
+1. Create `src/providers/<name>.ts` implementing `SubscriptionProvider`
+2. Add host permission in `manifest.json`
+3. Register in `src/providers/index.ts`
+4. Add logo SVG to `public/logos/`
+
+### Adding a New Language
+
+1. Create `src/i18n/locales/<code>.ts` (use `en.ts` as template)
+2. Import and register in `src/i18n/index.ts`
+3. Add the locale to the `locales` array in `src/popup/App.tsx`
+
 ## Feedback
 
 - If you find SubLens useful, please give it a ⭐
 - For bugs or feature requests, feel free to [open an issue](https://github.com/heartleo/sublens/issues).
-
