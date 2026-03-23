@@ -102,6 +102,7 @@ export default function App() {
       }
     }
     await load();
+    chrome.runtime.sendMessage({ type: "update-badge" }).catch(() => {});
     setRefreshing(false);
   }, [load]);
 
@@ -132,6 +133,7 @@ export default function App() {
       }
     }
     await load();
+    chrome.runtime.sendMessage({ type: "update-badge" }).catch(() => {});
     setRefreshing(false);
   };
 
