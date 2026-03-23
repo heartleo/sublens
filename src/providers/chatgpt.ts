@@ -68,6 +68,7 @@ export const chatgptProvider: SubscriptionProvider = {
       name: "ChatGPT",
       plan: "",
       price: "",
+      originalPrice: null,
       active: false,
       nextBillingDate: null,
       daysUntilBilling: null,

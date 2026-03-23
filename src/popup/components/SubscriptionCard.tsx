@@ -79,6 +79,9 @@ export function SubscriptionCard({ info, highlight, dim }: Props) {
             <div className="sub-detail error">{info.error}</div>
           ) : isPaid && info.nextBillingDate ? (
             <div className="sub-detail">
+              {info.originalPrice && (
+                <span className="price-original">{info.originalPrice}</span>
+              )}
               {info.price}
               <span className="sep" />
               Renews {info.nextBillingDate}
@@ -88,7 +91,12 @@ export function SubscriptionCard({ info, highlight, dim }: Props) {
             </div>
           ) : (
             <div className="sub-detail dim">
-              {isFree ? "Free plan" : info.active ? info.price || "Active" : "Not subscribed"}
+              {isFree ? "Free plan" : info.active ? (
+                <>
+                  {info.originalPrice && <span className="price-original">{info.originalPrice}</span>}
+                  {info.price || "Active"}
+                </>
+              ) : "Not subscribed"}
             </div>
           )}
         </div>

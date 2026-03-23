@@ -17,7 +17,7 @@ export function SummaryCard({ paidCount, totalMonthly, onPaidDoubleClick }: Prop
       </div>
       <div className="summary-divider" />
       <div className="summary-item">
-        <span className="summary-value accent">${totalMonthly.toFixed(0)}</span>
+        <span className="summary-value accent">${totalMonthly.toFixed(2)}</span>
         <span className="summary-label">Monthly</span>
       </div>
     </div>

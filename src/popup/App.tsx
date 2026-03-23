@@ -268,6 +268,7 @@ export default function App() {
                       name: provider.name,
                       plan: "",
                       price: "",
+                      originalPrice: null,
                       active: false,
                       nextBillingDate: null,
                       daysUntilBilling: null,

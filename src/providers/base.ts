@@ -8,6 +8,8 @@ export interface SubscriptionInfo {
   plan: string;
   /** Monthly/yearly price label, e.g. "$20/mo". */
   price: string;
+  /** Original (non-discounted) price, e.g. "$7.99/mo". Null when no discount. */
+  originalPrice: string | null;
   /** Whether the subscription is currently active. */
   active: boolean;
   /** Next billing date. */

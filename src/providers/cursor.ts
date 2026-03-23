@@ -71,6 +71,7 @@ export const cursorProvider: SubscriptionProvider = {
       name: "Cursor",
       plan: "",
       price: "",
+      originalPrice: null,
       active: false,
       nextBillingDate: null,
       daysUntilBilling: null,

@@ -1,43 +1,128 @@
 import type { SubscriptionInfo, SubscriptionProvider } from "./base";
 
-const ONE_URL = "https://one.google.com";
+const SETTINGS_URL =
+  "https://one.google.com/settings?expand=upgrade&g1_last_touchpoint=64&g1_landing_page=1";
 
-/** Known Google One storage tiers → plan name + price. */
-const planMap: Record<string, { plan: string; price: string }> = {
-  "15 GB": { plan: "Free", price: "" },
-  "100 GB": { plan: "Basic", price: "$1.99/mo" },
-  "200 GB": { plan: "Standard", price: "$2.99/mo" },
-  "2 TB": { plan: "Premium", price: "$9.99/mo" },
-  "5 TB": { plan: "AI Premium", price: "$19.99/mo" },
-};
-
-/** Extract the CSRF token (SNlM0e) from the Google One page HTML. */
-function extractCsrfToken(html: string): string | null {
-  const m = html.match(/SNlM0e":"([^"]+)"/);
-  return m ? m[1] : null;
+/** Extract an AF_initDataCallback data block by key from the page HTML. */
+function extractDsData(html: string, key: string): unknown | null {
+  const regex = new RegExp(
+    `AF_initDataCallback\\(\\{key:\\s*'${key}',\\s*hash:\\s*'[^']*',\\s*data:([\\s\\S]*?),\\s*sideChannel:\\s*\\{`,
+  );
+  const m = regex.exec(html);
+  if (!m) return null;
+  try {
+    return JSON.parse(m[1].trim());
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Parse Google's batchexecute response format.
- * The response starts with `)]}'\n` followed by length-prefixed JSON lines.
+ * Extract the current plan name from ds:5[0].
+ * The plan name is embedded as a JSON string inside the productId field:
+ *   ds:5[0][1][...] contains '{"name":"Google AI Plus (200GB)", ...}'
  */
-function parseBatchResponse(raw: string): string | null {
-  // Strip the )]}' prefix
-  const body = raw.replace(/^\)\]\}'\n?/, "");
-  // Find the first data line (starts with a number = length prefix)
-  const lines = body.split("\n").filter((l) => l.trim());
-  for (const line of lines) {
-    try {
-      const parsed = JSON.parse(line);
-      // parsed is an array of arrays; the data is at [0][2]
-      if (Array.isArray(parsed) && parsed[0]?.[2]) {
-        return parsed[0][2];
-      }
-    } catch {
-      continue;
+function extractCurrentPlan(html: string): {
+  plan: string;
+  price: string;
+  originalPrice: string | null;
+  storageTier: string;
+} | null {
+  const ds5 = extractDsData(html, "ds:5") as unknown[][] | null;
+  if (!ds5?.[0]) return null;
+
+  // ds:5[0] is the current plan array, ds:5[0][0] holds plan details:
+  //   [0] = ["200 GB", bytes]  — storage tier
+  //   [1] = ["$3.99 / month", ...] — actual/discounted monthly price
+  //   [5] = "Google AI Plus" — plan name
+  const current = ds5[0] as unknown[];
+  const details = current[0] as unknown[] | undefined;
+  if (!details) return null;
+
+  const storageTier = (details[0] as unknown[])?.[0] as string | undefined;
+  if (!storageTier) return null;
+
+  // Plan name directly from details[5]
+  const planName = (details[5] as string) ?? storageTier;
+
+  // Actual price (including promo/discount) from details[1][0], e.g. "$3.99 / month"
+  const priceStr = (details[1] as unknown[])?.[0] as string | undefined;
+  let price = "";
+  if (priceStr) {
+    const m = priceStr.match(/(\$[\d.]+)/);
+    price = m ? `${m[1]}/mo` : "";
+  }
+
+  // Original (base) price from productId JSON, e.g. "price":"$7.99"
+  let originalPrice: string | null = null;
+  const str = JSON.stringify(current);
+  const basePriceMatch = str.match(/\\"price\\":\\"(\$[\d.]+)\\"/);
+  if (basePriceMatch?.[1] && price) {
+    const baseStr = `${basePriceMatch[1]}/mo`;
+    // Only set originalPrice if it differs from actual price (i.e. there's a discount)
+    if (baseStr !== price) {
+      originalPrice = baseStr;
     }
   }
-  return null;
+
+  return { plan: planName, price, originalPrice, storageTier };
+}
+
+/**
+ * Extract storage usage from ds:6.
+ * ds:6 = [["200 GB", bytes], ["0.11 GB", bytes], "0", "Your storage is 0% full", 3]
+ */
+function extractStorageUsage(html: string): {
+  usagePercent: number;
+  usageLabel: string;
+} | null {
+  const ds6 = extractDsData(html, "ds:6") as unknown[] | null;
+  if (!ds6) return null;
+
+  const total = (ds6[0] as string[])?.[0] as string | undefined;
+  const used = (ds6[1] as string[])?.[0] as string | undefined;
+  const percent = ds6[2] as string | undefined;
+
+  if (!total || !used || percent == null) return null;
+
+  return {
+    usagePercent: parseInt(percent, 10),
+    usageLabel: `${used} of ${total}`,
+  };
+}
+
+/**
+ * Extract member-since epoch from ds:0[8].
+ * ds:0[8] = [epochSeconds, nanos]
+ */
+function extractMemberSinceEpoch(html: string): number | null {
+  const ds0 = extractDsData(html, "ds:0") as unknown[] | null;
+  const epoch = (ds0?.[8] as number[])?.[0];
+  return typeof epoch === "number" ? epoch : null;
+}
+
+/** Compute the next monthly billing date from the member-since epoch. */
+function computeNextBillingDate(memberSinceEpoch: number): Date {
+  const start = new Date(memberSinceEpoch * 1000);
+  const now = new Date();
+  const next = new Date(start);
+  while (next <= now) {
+    next.setMonth(next.getMonth() + 1);
+  }
+  return next;
+}
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function daysUntil(d: Date): number {
+  const ms = d.getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
 export const googleOneProvider: SubscriptionProvider = {
@@ -51,6 +136,7 @@ export const googleOneProvider: SubscriptionProvider = {
       name: "Google One",
       plan: "",
       price: "",
+      originalPrice: null,
       active: false,
       nextBillingDate: null,
       daysUntilBilling: null,
@@ -63,8 +149,7 @@ export const googleOneProvider: SubscriptionProvider = {
     };
 
     try {
-      // Step 1: Fetch the page to get CSRF token
-      const pageResp = await fetch(ONE_URL, { credentials: "include" });
+      const pageResp = await fetch(SETTINGS_URL, { credentials: "include" });
       if (!pageResp.ok) {
         return {
           ...base,
@@ -73,8 +158,9 @@ export const googleOneProvider: SubscriptionProvider = {
         };
       }
       const html = await pageResp.text();
-      const csrfToken = extractCsrfToken(html);
-      if (!csrfToken) {
+
+      // Check if logged in (CSRF token present)
+      if (!html.match(/SNlM0e":"[^"]+"/)) {
         return {
           ...base,
           error: "Not logged in to Google",
@@ -82,61 +168,40 @@ export const googleOneProvider: SubscriptionProvider = {
         };
       }
 
-      // Step 2: Call batchexecute with GI6Jdd to get current plan
-      const rpcid = "GI6Jdd";
-      const params = new URLSearchParams({
-        rpcids: rpcid,
-        "source-path": "/",
-        hl: "en",
-        "soc-app": "727",
-        "soc-platform": "1",
-        "soc-device": "1",
-        rt: "c",
-      });
-      const body = new URLSearchParams({
-        "f.req": `[[[${JSON.stringify(rpcid)},${JSON.stringify("[]")},null,"generic"]]]`,
-        at: csrfToken,
-      });
-
-      const rpcResp = await fetch(
-        `${ONE_URL}/_/SubscriptionsManagementUi/data/batchexecute?${params}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: body.toString(),
-        }
-      );
-      if (!rpcResp.ok) {
-        return { ...base, error: `API request failed: HTTP ${rpcResp.status}` };
-      }
-
-      const rawText = await rpcResp.text();
-      const dataStr = parseBatchResponse(rawText);
-      if (!dataStr) {
-        return { ...base, error: "Failed to parse response" };
-      }
-
-      const data = JSON.parse(dataStr);
-      // data is [[null, null, "US", null, null, "15 GB", null, "0", ...]]
-      const inner = Array.isArray(data[0]) ? data[0] : data;
-      const storageTier = inner[5] as string | undefined;
-      const percentUsed = inner[7] as string | undefined;
-
-      if (!storageTier) {
+      // Extract current plan from ds:5
+      const currentPlan = extractCurrentPlan(html);
+      if (!currentPlan) {
         return { ...base, error: "Could not determine plan" };
       }
 
-      const matched = planMap[storageTier];
-      const plan = matched?.plan ?? storageTier;
-      const price = matched?.price ?? "";
+      const { plan, price, originalPrice, storageTier } = currentPlan;
+      const isFree = storageTier === "15 GB";
+
+      // Storage usage from ds:6
+      const usage = extractStorageUsage(html);
+
+      // Next billing date from member-since timestamp in ds:0
+      let nextBillingDate: string | null = null;
+      let daysUntilBilling: number | null = null;
+      if (!isFree) {
+        const memberSinceEpoch = extractMemberSinceEpoch(html);
+        if (memberSinceEpoch) {
+          const next = computeNextBillingDate(memberSinceEpoch);
+          nextBillingDate = formatDate(next);
+          daysUntilBilling = daysUntil(next);
+        }
+      }
+
       return {
         ...base,
         plan,
         price,
+        originalPrice,
         active: true,
-        usagePercent: percentUsed ? parseInt(percentUsed, 10) : null,
-        usageLabel: percentUsed ? `${percentUsed}% of ${storageTier}` : null,
+        nextBillingDate,
+        daysUntilBilling,
+        usagePercent: usage?.usagePercent ?? null,
+        usageLabel: usage?.usageLabel ?? null,
       };
     } catch (err) {
       return {

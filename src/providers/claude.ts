@@ -9,6 +9,12 @@ interface Organization {
   billing_type: string | null;
 }
 
+interface SubscriptionDetails {
+  next_charge_date: string | null;
+  status: string | null;
+  billing_interval: string | null;
+}
+
 const capabilityToPlan: Record<string, { plan: string; price: string }> = {
   claude_max: { plan: "Max", price: "$100/mo" },
   claude_pro: { plan: "Pro", price: "$20/mo" },
@@ -32,6 +38,7 @@ export const claudeProvider: SubscriptionProvider = {
       name: "Claude",
       plan: "",
       price: "",
+      originalPrice: null,
       active: false,
       nextBillingDate: null,
       daysUntilBilling: null,
@@ -58,11 +65,39 @@ export const claudeProvider: SubscriptionProvider = {
       // Use the first org (personal account)
       const org = orgs[0];
       const { plan, price } = detectPlan(org.capabilities);
+
+      // Fetch renewal date from subscription_details
+      let nextBillingDate: string | null = null;
+      let daysUntilBilling: number | null = null;
+      try {
+        const subResp = await fetch(
+          `${API_BASE}/api/organizations/${org.uuid}/subscription_details`,
+          { credentials: "include" },
+        );
+        if (subResp.ok) {
+          const sub: SubscriptionDetails = await subResp.json();
+          if (sub.next_charge_date) {
+            const d = new Date(sub.next_charge_date);
+            nextBillingDate = d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+            const ms = d.getTime() - Date.now();
+            daysUntilBilling = Math.max(0, Math.ceil(ms / 86_400_000));
+          }
+        }
+      } catch {
+        // Non-critical — skip silently
+      }
+
       return {
         ...base,
         plan,
         price,
         active: true,
+        nextBillingDate,
+        daysUntilBilling,
       };
     } catch (err) {
       return {

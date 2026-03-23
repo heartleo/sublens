@@ -405,6 +405,12 @@
   background: var(--accent-bg-hover);
 }
 
+.price-original {
+  text-decoration: line-through;
+  color: var(--text-dim);
+  margin-right: 2px;
+}
+
 .sep {
   display: inline-block;
   width: 3px;

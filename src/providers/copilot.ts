@@ -148,6 +148,7 @@ export const copilotProvider: SubscriptionProvider = {
       name: "GitHub Copilot",
       plan: "",
       price: "",
+      originalPrice: null,
       active: false,
       nextBillingDate: null,
       daysUntilBilling: null,
