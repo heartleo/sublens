@@ -2,7 +2,7 @@ import { providers } from "../providers";
 import { saveSubscription } from "../storage";
 
 const ALARM_NAME = "sublens-refresh";
-const REFRESH_INTERVAL_MINUTES = 60; // refresh every hour
+const REFRESH_INTERVAL_MINUTES = 15; // refresh every 15 minutes
 
 /** Refresh all providers and save results. */
 async function refreshAll(): Promise<void> {

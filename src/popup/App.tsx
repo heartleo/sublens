@@ -77,27 +77,37 @@ export default function App() {
     return data;
   }, []);
 
+  const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+
+  const silentRefresh = useCallback(async () => {
+    setRefreshing(true);
+    for (const provider of providers) {
+      try {
+        const info = await provider.fetch();
+        await saveSubscription(info);
+      } catch {
+        // errors stored inside info
+      }
+    }
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
   useEffect(() => {
     void load().then(async (data) => {
-      // Auto-refresh providers that need login or have no cached data
-      const needsRefresh = providers.some(
-        (p) => !data[p.id] || data[p.id].loginUrl
-      );
-      if (needsRefresh) {
-        setRefreshing(true);
-        for (const provider of providers) {
-          try {
-            const info = await provider.fetch();
-            await saveSubscription(info);
-          } catch {
-            // errors stored inside info
-          }
-        }
-        await load();
-        setRefreshing(false);
+      // Check if any provider is stale (>10min) or missing
+      const now = Date.now();
+      const isStale = providers.some((p) => {
+        const info = data[p.id];
+        if (!info) return true;
+        const age = now - new Date(info.lastUpdated).getTime();
+        return age > STALE_THRESHOLD_MS;
+      });
+      if (isStale) {
+        await silentRefresh();
       }
     });
-  }, [load]);
+  }, [load, silentRefresh]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -170,8 +180,13 @@ export default function App() {
     <div className="app">
       {/* Header */}
       <header className="header">
-        <div className="header-left">
-          <div className="logo">S</div>
+        <div
+          className="header-left"
+          onDoubleClick={handleRefresh}
+          title="Double-click to refresh"
+          style={{ cursor: "pointer", userSelect: "none" }}
+        >
+          <div className={`logo ${refreshing ? "spinning" : ""}`}>S</div>
           <span className="brand">SubLens</span>
         </div>
         <div className="header-actions">
@@ -218,19 +233,6 @@ export default function App() {
                 />
               </svg>
             )}
-          </button>
-          <button
-            className={`icon-btn ${refreshing ? "spinning" : ""}`}
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Refresh all"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M13.65 2.35A7.96 7.96 0 008 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 018 14 6 6 0 018 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z"
-                fill="currentColor"
-              />
-            </svg>
           </button>
         </div>
       </header>
