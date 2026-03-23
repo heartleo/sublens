@@ -78,11 +78,7 @@ export const claudeProvider: SubscriptionProvider = {
           const sub: SubscriptionDetails = await subResp.json();
           if (sub.next_charge_date) {
             const d = new Date(sub.next_charge_date);
-            nextBillingDate = d.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
+            nextBillingDate = d.toISOString().slice(0, 10);
             const ms = d.getTime() - Date.now();
             daysUntilBilling = Math.max(0, Math.ceil(ms / 86_400_000));
           }

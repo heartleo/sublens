@@ -12,7 +12,7 @@ export interface SubscriptionInfo {
   originalPrice: string | null;
   /** Whether the subscription is currently active. */
   active: boolean;
-  /** Next billing date. */
+  /** Next billing date (ISO date string, e.g. "2026-04-23"). Formatted in UI layer. */
   nextBillingDate: string | null;
   /** Days until next billing. */
   daysUntilBilling: number | null;

@@ -112,12 +112,8 @@ function computeNextBillingDate(memberSinceEpoch: number): Date {
   return next;
 }
 
-function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 function daysUntil(d: Date): number {
@@ -187,7 +183,7 @@ export const googleOneProvider: SubscriptionProvider = {
         const memberSinceEpoch = extractMemberSinceEpoch(html);
         if (memberSinceEpoch) {
           const next = computeNextBillingDate(memberSinceEpoch);
-          nextBillingDate = formatDate(next);
+          nextBillingDate = toISODate(next);
           daysUntilBilling = daysUntil(next);
         }
       }

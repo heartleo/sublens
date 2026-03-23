@@ -37,21 +37,18 @@ async function getGitHubSession(): Promise<string | null> {
   }
 }
 
-function formatDate(dateStr: string): string {
+function toISODate(dateStr: string): string {
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) {
-    // Try parsing "Mon DD, YYYY" format.
-    const parts = dateStr.match(/(\w+)\s+(\d+),\s+(\d+)/);
-    if (parts) {
-      return dateStr; // already human-readable
-    }
-    return dateStr;
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10);
   }
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  // Try parsing "Mon DD, YYYY" format
+  const parts = dateStr.match(/(\w+)\s+(\d+),\s+(\d+)/);
+  if (parts) {
+    const parsed = new Date(`${parts[1]} ${parts[2]}, ${parts[3]}`);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  }
+  return dateStr;
 }
 
 function daysUntilDate(dateStr: string): number | null {
@@ -187,7 +184,7 @@ export const copilotProvider: SubscriptionProvider = {
         plan,
         price,
         active: true,
-        nextBillingDate: nextDate ? formatDate(nextDate) : null,
+        nextBillingDate: nextDate ? toISODate(nextDate) : null,
         daysUntilBilling: nextDate ? daysUntilDate(nextDate) : null,
         usagePercent: pct,
         usageLabel: entitlement > 0 ? `${Math.round(used)} / ${entitlement} requests` : null,

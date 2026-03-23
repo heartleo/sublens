@@ -44,12 +44,8 @@ const planPrice: Record<string, string> = {
   chatgptteamplan: "$25/user/mo",
 };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function toISODate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
 }
 
 function daysUntil(iso: string): number {
@@ -128,7 +124,7 @@ export const chatgptProvider: SubscriptionProvider = {
         plan,
         price,
         active: ent.has_active_subscription,
-        nextBillingDate: renewDate ? formatDate(renewDate) : null,
+        nextBillingDate: renewDate ? toISODate(renewDate) : null,
         daysUntilBilling: renewDate ? daysUntil(renewDate) : null,
       };
     } catch (err) {

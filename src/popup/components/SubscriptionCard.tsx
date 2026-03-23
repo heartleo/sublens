@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { isFreePlan, type SubscriptionInfo } from "../../providers/base";
+import { useI18n, useLocale, localizePrice, formatDate } from "../../i18n";
 
 interface Props {
   info: SubscriptionInfo;
@@ -16,6 +17,8 @@ const iconMeta: Record<string, { logo: string; letter: string; className: string
 };
 
 export function SubscriptionCard({ info, highlight, dim }: Props) {
+  const t = useI18n();
+  const locale = useLocale();
   const meta = iconMeta[info.id] ?? { logo: "", letter: "?", className: "" };
   const [imgFailed, setImgFailed] = useState(false);
 
@@ -58,12 +61,12 @@ export function SubscriptionCard({ info, highlight, dim }: Props) {
           </div>
           {needsLogin ? (
             <div className="sub-detail connect">
-              <span>Connect your account</span>
+              <span>{t.connectAccount}</span>
               <button
                 className="connect-btn"
                 onClick={() => chrome.tabs.create({ url: info.loginUrl! })}
               >
-                Sign in
+                {t.signIn}
                 <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M6 3l5 5-5 5"
@@ -80,23 +83,23 @@ export function SubscriptionCard({ info, highlight, dim }: Props) {
           ) : isPaid && info.nextBillingDate ? (
             <div className="sub-detail">
               {info.originalPrice && (
-                <span className="price-original">{info.originalPrice}</span>
+                <span className="price-original">{localizePrice(info.originalPrice, t)}</span>
               )}
-              {info.price}
+              {localizePrice(info.price, t)}
               <span className="sep" />
-              Renews {info.nextBillingDate}
+              {t.renews} {formatDate(info.nextBillingDate!, locale)}
               {info.daysUntilBilling != null && (
-                <span className="days-left">{info.daysUntilBilling}d</span>
+                <span className="days-left">{info.daysUntilBilling}{t.daySuffix}</span>
               )}
             </div>
           ) : (
             <div className="sub-detail dim">
-              {isFree ? "Free plan" : info.active ? (
+              {isFree ? t.freePlan : info.active ? (
                 <>
-                  {info.originalPrice && <span className="price-original">{info.originalPrice}</span>}
-                  {info.price || "Active"}
+                  {info.originalPrice && <span className="price-original">{localizePrice(info.originalPrice, t)}</span>}
+                  {info.price ? localizePrice(info.price, t) : t.active}
                 </>
-              ) : "Not subscribed"}
+              ) : t.notSubscribed}
             </div>
           )}
         </div>

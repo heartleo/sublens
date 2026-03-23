@@ -6,7 +6,10 @@ import { SubscriptionCard } from "./components/SubscriptionCard";
 import { SkeletonCard } from "./components/SkeletonCard";
 import { providers } from "../providers";
 import { saveSubscription } from "../storage";
+import { I18nContext, LocaleContext, getMessages, type Locale } from "../i18n";
 import "./styles.css";
+
+const locales: Locale[] = ["en", "zh"];
 
 const defaultOrder = providers.map((p) => p.id);
 
@@ -34,19 +37,22 @@ export default function App() {
   const [order, setOrder] = useState<string[]>(defaultOrder);
   const [theme, setTheme] = useState<ThemeMode>("system");
   const [, setResolvedTheme] = useState<"light" | "dark">("dark");
+  const [locale, setLocale] = useState<Locale>("en");
+  const t = getMessages(locale);
 
   // Drag state
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const dragNodeRef = useRef<HTMLDivElement | null>(null);
 
-  // Load theme on mount
+  // Load theme and locale on mount
   useEffect(() => {
-    chrome.storage.local.get("theme").then((r) => {
+    chrome.storage.local.get(["theme", "locale"]).then((r) => {
       const saved = (r.theme as ThemeMode) || "system";
       setTheme(saved);
       applyTheme(saved);
       setResolvedTheme(getResolvedTheme(saved));
+      if (r.locale) setLocale(r.locale as Locale);
     });
 
     const mq = window.matchMedia("(prefers-color-scheme: light)");
@@ -61,6 +67,12 @@ export default function App() {
     applyTheme(next);
     setResolvedTheme(getResolvedTheme(next));
     chrome.storage.local.set({ theme: next });
+  };
+
+  const cycleLocale = () => {
+    const next = locales[(locales.indexOf(locale) + 1) % locales.length];
+    setLocale(next);
+    chrome.storage.local.set({ locale: next });
   };
 
   const load = useCallback(async () => {
@@ -174,22 +186,27 @@ export default function App() {
   }, 0);
 
   const themeTitle =
-    theme === "light" ? "Theme: Light" : theme === "dark" ? "Theme: Dark" : "Theme: Auto";
+    theme === "light" ? t.themeLight : theme === "dark" ? t.themeDark : t.themeAuto;
 
   return (
+    <LocaleContext.Provider value={locale}>
+    <I18nContext.Provider value={t}>
     <div className="app">
       {/* Header */}
       <header className="header">
         <div
           className="header-left"
           onDoubleClick={handleRefresh}
-          title="Double-click to refresh"
+          title={t.refreshTip}
           style={{ cursor: "pointer", userSelect: "none" }}
         >
           <div className={`logo ${refreshing ? "spinning" : ""}`}>S</div>
           <span className="brand">SubLens</span>
         </div>
         <div className="header-actions">
+          <button className="icon-btn" onClick={cycleLocale} title={locale.toUpperCase()}>
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{locale.toUpperCase()}</span>
+          </button>
           <button className="icon-btn" onClick={cycleTheme} title={themeTitle}>
             {theme === "light" ? (
               /* Sun */
@@ -276,7 +293,7 @@ export default function App() {
                       daysUntilBilling: null,
                       usagePercent: null,
                       usageLabel: null,
-                      error: "Click refresh to load",
+                      error: t.clickToLoad,
                       loginUrl: null,
                       homeUrl: null,
                       lastUpdated: "",
@@ -290,8 +307,10 @@ export default function App() {
       {/* Footer */}
       <footer className="footer">
         <span className="footer-dot" />
-        All data stored locally
+        {t.storedLocally}
       </footer>
     </div>
+    </I18nContext.Provider>
+    </LocaleContext.Provider>
   );
 }

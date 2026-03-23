@@ -47,12 +47,8 @@ async function cursorFetch<T>(token: string, path: string): Promise<T> {
   return resp.json();
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function toISODate(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
 }
 
 function daysUntil(iso: string): number {
@@ -111,7 +107,7 @@ export const cursorProvider: SubscriptionProvider = {
         plan,
         price,
         active: stripe.subscriptionStatus === "active",
-        nextBillingDate: formatDate(billingEnd),
+        nextBillingDate: toISODate(billingEnd),
         daysUntilBilling: daysUntil(billingEnd),
         usagePercent: u.totalPercentUsed,
         usageLabel: `${u.used} / ${u.limit} requests`,
