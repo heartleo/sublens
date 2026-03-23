@@ -25,7 +25,6 @@
 - **Drag-to-reorder** — arrange cards in your preferred order
 - **Dark / Light / System theme** — auto-follows OS preference
 - **Multi-language** — English and Simplified Chinese, with locale-aware date and price formatting
-- **Smart refresh** — auto-refreshes stale data (>10 min), background sync every 15 min, manual refresh via double-click logo
 - **Privacy-first** — all data stored locally, no external analytics
 
 ## Install
