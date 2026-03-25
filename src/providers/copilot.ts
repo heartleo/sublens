@@ -40,13 +40,21 @@ async function getGitHubSession(): Promise<string | null> {
 function toISODate(dateStr: string): string {
   const d = new Date(dateStr);
   if (!isNaN(d.getTime())) {
-    return d.toISOString().slice(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   }
   // Try parsing "Mon DD, YYYY" format
   const parts = dateStr.match(/(\w+)\s+(\d+),\s+(\d+)/);
   if (parts) {
     const parsed = new Date(`${parts[1]} ${parts[2]}, ${parts[3]}`);
-    if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    if (!isNaN(parsed.getTime())) {
+      const y = parsed.getFullYear();
+      const m = String(parsed.getMonth() + 1).padStart(2, "0");
+      const day = String(parsed.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
   }
   return dateStr;
 }
