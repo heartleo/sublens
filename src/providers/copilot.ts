@@ -6,6 +6,7 @@ const BILLING_URL = "https://github.com/settings/billing";
 
 interface EmbeddedPayload {
   copilotForIndividualsData?: {
+    onFreeTier?: boolean;
     subscriptionItem?: {
       name: string;
       price: number;
@@ -172,16 +173,20 @@ export const copilotProvider: SubscriptionProvider = {
 
     try {
       const { csrf, payload, customerID } = await fetchBillingPage(session);
-      const sub = payload.copilotForIndividualsData?.subscriptionItem;
+      const copilotData = payload.copilotForIndividualsData;
+      const sub = copilotData?.subscriptionItem;
+      const isFreeTier = copilotData?.onFreeTier === true;
       const nextDate = payload.nextPaymentTileData?.nextPaymentDate;
 
-      const plan = sub?.name || "Unknown";
-      const price =
-        sub?.price && sub?.billingCycle
+      // Determine plan name and price from billing data.
+      const plan = isFreeTier ? "Free" : sub?.name || "Unknown";
+      const price = isFreeTier
+        ? "Free"
+        : sub?.price && sub?.billingCycle
           ? `$${sub.price.toFixed(2)}/${sub.billingCycle === "month" ? "mo" : "yr"}`
           : "";
 
-      // Fetch current month usage.
+      // Fetch usage (only meaningful for paid plans with entitlement > 0).
       const usage = await fetchUsageCard(session, csrf, customerID, 3);
       const entitlement = usage.userPremiumRequestEntitlement;
       const used = usage.discountQuantity;

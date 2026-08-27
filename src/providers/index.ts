@@ -1,4 +1,5 @@
-export type { SubscriptionInfo, SubscriptionProvider } from "./base";
+export { createSubscriptionInfo } from "./base";
+export type { SubscriptionInfo, SubscriptionInfoOverrides, SubscriptionProvider } from "./base";
 export { cursorProvider } from "./cursor";
 export { copilotProvider } from "./copilot";
 export { chatgptProvider } from "./chatgpt";

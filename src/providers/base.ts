@@ -30,6 +30,38 @@ export interface SubscriptionInfo {
   lastUpdated: string;
 }
 
+/** Fields a provider can override when creating a subscription result. */
+export type SubscriptionInfoOverrides = Partial<Omit<SubscriptionInfo, "id" | "name">>;
+
+/**
+ * Create a complete subscription result with safe defaults.
+ *
+ * Providers only need to override fields returned by their upstream service. Errors should be
+ * returned through the `error` field so one failed provider cannot stop the full refresh.
+ */
+export function createSubscriptionInfo(
+  provider: Pick<SubscriptionProvider, "id" | "name">,
+  overrides: SubscriptionInfoOverrides = {}
+): SubscriptionInfo {
+  return {
+    id: provider.id,
+    name: provider.name,
+    plan: "",
+    price: "",
+    originalPrice: null,
+    active: false,
+    nextBillingDate: null,
+    daysUntilBilling: null,
+    usagePercent: null,
+    usageLabel: null,
+    error: null,
+    loginUrl: null,
+    homeUrl: null,
+    lastUpdated: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 /** Check whether a subscription is a free (non-paid) plan. */
 export function isFreePlan(info: SubscriptionInfo): boolean {
   return !info.price || info.price === "$0" || /free/i.test(info.plan);

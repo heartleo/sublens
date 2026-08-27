@@ -85,10 +85,17 @@ npm run format       # Prettier
 
 ### Adding a New Provider
 
-1. Create `src/providers/<name>.ts` implementing `SubscriptionProvider`
-2. Add host permission in `manifest.json`
-3. Register in `src/providers/index.ts`
-4. Add logo SVG to `public/logos/`
+1. Copy `src/providers/_template.ts` to `src/providers/<provider-id>.ts`
+2. Replace the provider metadata, response type guard, endpoint, and response mapping
+3. Return failures through `SubscriptionInfo.error`; do not throw from `fetch()`
+4. Register the provider in `src/providers/index.ts`
+5. Add the required host pattern to `manifest.json`
+6. Add an SVG logo to `public/logos/` and update the privacy documentation when data access changes
+7. Run `npm run lint`, `npm run typecheck`, and `npm run build`
+
+Use `createSubscriptionInfo()` from `src/providers/base.ts` for complete defaults. Keep endpoint
+details and response types inside the provider adapter so callers only depend on
+`SubscriptionProvider`.
 
 ### Adding a New Language
 
