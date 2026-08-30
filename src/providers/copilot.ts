@@ -1,15 +1,15 @@
 import type { SubscriptionInfo, SubscriptionProvider } from "./base";
 
-const COOKIE_URL = "https://github.com";
-const COOKIE_NAME = "user_session";
 const BILLING_URL = "https://github.com/settings/billing";
+
+class GitHubAuthenticationError extends Error {}
 
 interface EmbeddedPayload {
   copilotForIndividualsData?: {
     onFreeTier?: boolean;
     subscriptionItem?: {
       name: string;
-      price: number;
+      price: number | string;
       billingCycle: string;
     };
   };
@@ -22,20 +22,12 @@ interface EmbeddedPayload {
 }
 
 interface UsageCardResponse {
-  userPremiumRequestEntitlement: number;
-  discountQuantity: number;
-}
-
-async function getGitHubSession(): Promise<string | null> {
-  try {
-    const cookie = await chrome.cookies.get({
-      url: COOKIE_URL,
-      name: COOKIE_NAME,
-    });
-    return cookie?.value ?? null;
-  } catch {
-    return null;
-  }
+  userPremiumRequestEntitlement?: number;
+  user_premium_request_entitlement?: number;
+  discountQuantity?: number;
+  discount_quantity?: number;
+  payload?: UsageCardResponse;
+  data?: UsageCardResponse;
 }
 
 function toISODate(dateStr: string): string {
@@ -89,23 +81,29 @@ function daysUntilDate(dateStr: string): number | null {
   return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
-async function fetchBillingPage(
-  session: string
-): Promise<{ csrf: string; payload: EmbeddedPayload; customerID: string }> {
+async function fetchBillingPage(): Promise<{
+  csrf: string | null;
+  payload: EmbeddedPayload;
+  customerID: string | null;
+}> {
   const resp = await fetch(BILLING_URL, {
     headers: {
-      Cookie: `user_session=${session}`,
-      "User-Agent": "Mozilla/5.0",
       Accept: "text/html",
     },
     credentials: "include",
+    cache: "no-store",
   });
+  if (resp.status === 401 || resp.status === 403 || resp.status === 404) {
+    throw new GitHubAuthenticationError("Not logged in to GitHub");
+  }
   if (!resp.ok) throw new Error(`Billing page returned ${resp.status}`);
   const html = await resp.text();
+  if (resp.url.includes("/login") || /<form[^>]+action="\/session"/i.test(html)) {
+    throw new GitHubAuthenticationError("Not logged in to GitHub");
+  }
 
   // Extract CSRF token.
   const csrfMatch = html.match(/name="authenticity_token"[^>]*value="([^"]+)"/);
-  if (!csrfMatch) throw new Error("CSRF token not found");
 
   // Extract embedded data.
   const dataMatch = html.match(
@@ -116,41 +114,51 @@ async function fetchBillingPage(
   const root = JSON.parse(dataMatch[1].trim());
   const payload: EmbeddedPayload = root.payload;
 
-  const customerID = payload.customer?.customerId;
-  if (!customerID) throw new Error("Customer ID not found");
+  const customerID =
+    payload.customer?.customerId ??
+    html.match(/"customerId"\s*:\s*"?(\d+)"?/)?.[1] ??
+    html.match(/customerId&amp;quot;\s*:\s*&amp;quot;?(\d+)/)?.[1] ??
+    html.match(/customer_id=(\d+)/)?.[1];
 
-  return { csrf: csrfMatch[1], payload, customerID: String(customerID) };
+  return {
+    csrf: csrfMatch?.[1] ?? null,
+    payload,
+    customerID: customerID ? String(customerID) : null,
+  };
 }
 
 async function fetchUsageCard(
-  session: string,
-  csrf: string,
+  csrf: string | null,
   customerID: string,
   period: number
 ): Promise<UsageCardResponse> {
   const url = `https://github.com/settings/billing/copilot_usage_card?customer_id=${customerID}&period=${period}`;
+  const headers: Record<string, string> = {
+    "X-Requested-With": "XMLHttpRequest",
+    Accept: "application/json",
+  };
+  if (csrf) headers["X-CSRF-Token"] = csrf;
   const resp = await fetch(url, {
-    headers: {
-      Cookie: `user_session=${session}`,
-      "X-CSRF-Token": csrf,
-      "X-Requested-With": "XMLHttpRequest",
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0",
-    },
+    headers,
     credentials: "include",
+    cache: "no-store",
   });
   if (!resp.ok) throw new Error(`Usage card returned ${resp.status}`);
-  return resp.json();
+  const root: UsageCardResponse = await resp.json();
+  return root.payload ?? root.data ?? root;
 }
 
 export const copilotProvider: SubscriptionProvider = {
   id: "copilot",
   name: "GitHub Copilot",
+  defaultToolId: "copilot",
+  permissions: { origins: ["https://github.com/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const now = new Date().toISOString();
     const base: SubscriptionInfo = {
-      id: "copilot",
+      providerId: "copilot",
+      linkedToolId: "copilot",
       name: "GitHub Copilot",
       plan: "",
       price: "",
@@ -166,14 +174,10 @@ export const copilotProvider: SubscriptionProvider = {
       lastUpdated: now,
     };
 
-    const session = await getGitHubSession();
-    if (!session) {
-      return { ...base, error: "Not logged in to GitHub", loginUrl: "https://github.com/login" };
-    }
-
     try {
-      const { csrf, payload, customerID } = await fetchBillingPage(session);
+      const { csrf, payload, customerID } = await fetchBillingPage();
       const copilotData = payload.copilotForIndividualsData;
+      if (!copilotData) throw new Error("GitHub Copilot billing data not found");
       const sub = copilotData?.subscriptionItem;
       const isFreeTier = copilotData?.onFreeTier === true;
       const nextDate = payload.nextPaymentTileData?.nextPaymentDate;
@@ -183,14 +187,24 @@ export const copilotProvider: SubscriptionProvider = {
       const price = isFreeTier
         ? "Free"
         : sub?.price && sub?.billingCycle
-          ? `$${sub.price.toFixed(2)}/${sub.billingCycle === "month" ? "mo" : "yr"}`
+          ? `$${Number(sub.price).toFixed(2)}/${sub.billingCycle === "month" ? "mo" : "yr"}`
           : "";
 
-      // Fetch usage (only meaningful for paid plans with entitlement > 0).
-      const usage = await fetchUsageCard(session, csrf, customerID, 3);
-      const entitlement = usage.userPremiumRequestEntitlement;
-      const used = usage.discountQuantity;
-      const pct = entitlement > 0 ? (used / entitlement) * 100 : null;
+      // Usage is supplementary. Keep the subscription usable if GitHub changes this endpoint.
+      let usagePercent: number | null = null;
+      let usageLabel: string | null = null;
+      if (customerID) {
+        try {
+          const usage = await fetchUsageCard(csrf, customerID, 3);
+          const entitlement =
+            usage.userPremiumRequestEntitlement ?? usage.user_premium_request_entitlement ?? 0;
+          const used = usage.discountQuantity ?? usage.discount_quantity ?? 0;
+          usagePercent = entitlement > 0 ? (used / entitlement) * 100 : null;
+          usageLabel = entitlement > 0 ? `${Math.round(used)} / ${entitlement} requests` : null;
+        } catch {
+          // The billing plan is still valid when usage is temporarily unavailable.
+        }
+      }
 
       return {
         ...base,
@@ -199,13 +213,14 @@ export const copilotProvider: SubscriptionProvider = {
         active: true,
         nextBillingDate: nextDate ? toISODate(nextDate) : null,
         daysUntilBilling: nextDate ? daysUntilDate(nextDate) : null,
-        usagePercent: pct,
-        usageLabel: entitlement > 0 ? `${Math.round(used)} / ${entitlement} requests` : null,
+        usagePercent,
+        usageLabel,
       };
     } catch (err) {
       return {
         ...base,
         error: err instanceof Error ? err.message : "Failed to fetch",
+        loginUrl: err instanceof GitHubAuthenticationError ? "https://github.com/login" : null,
       };
     }
   },

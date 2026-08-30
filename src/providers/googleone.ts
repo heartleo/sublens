@@ -6,7 +6,7 @@ const SETTINGS_URL =
 /** Extract an AF_initDataCallback data block by key from the page HTML. */
 function extractDsData(html: string, key: string): unknown | null {
   const regex = new RegExp(
-    `AF_initDataCallback\\(\\{key:\\s*'${key}',\\s*hash:\\s*'[^']*',\\s*data:([\\s\\S]*?),\\s*sideChannel:\\s*\\{`,
+    `AF_initDataCallback\\(\\{key:\\s*'${key}',\\s*hash:\\s*'[^']*',\\s*data:([\\s\\S]*?),\\s*sideChannel:\\s*\\{`
   );
   const m = regex.exec(html);
   if (!m) return null;
@@ -124,11 +124,14 @@ function daysUntil(d: Date): number {
 export const googleOneProvider: SubscriptionProvider = {
   id: "googleone",
   name: "Google One",
+  defaultToolId: null,
+  permissions: { origins: ["https://one.google.com/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const now = new Date().toISOString();
     const base: SubscriptionInfo = {
-      id: "googleone",
+      providerId: "googleone",
+      linkedToolId: null,
       name: "Google One",
       plan: "",
       price: "",
@@ -190,6 +193,7 @@ export const googleOneProvider: SubscriptionProvider = {
 
       return {
         ...base,
+        linkedToolId: /\bgoogle ai\b/i.test(plan) ? "gemini" : null,
         plan,
         price,
         originalPrice,

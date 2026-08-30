@@ -30,11 +30,14 @@ function detectPlan(capabilities: string[]): { plan: string; price: string } {
 export const claudeProvider: SubscriptionProvider = {
   id: "claude",
   name: "Claude",
+  defaultToolId: "claude",
+  permissions: { origins: ["https://claude.ai/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const now = new Date().toISOString();
     const base: SubscriptionInfo = {
-      id: "claude",
+      providerId: "claude",
+      linkedToolId: "claude",
       name: "Claude",
       plan: "",
       price: "",
@@ -72,7 +75,7 @@ export const claudeProvider: SubscriptionProvider = {
       try {
         const subResp = await fetch(
           `${API_BASE}/api/organizations/${org.uuid}/subscription_details`,
-          { credentials: "include" },
+          { credentials: "include" }
         );
         if (subResp.ok) {
           const sub: SubscriptionDetails = await subResp.json();

@@ -1,49 +1,42 @@
 import type { SubscriptionInfo, SubscriptionProvider } from "./base";
 
-const COOKIE_URL = "https://cursor.com";
-const COOKIE_NAME = "WorkosCursorSessionToken";
 const API_BASE = "https://cursor.com";
 
+class CursorAuthenticationError extends Error {}
+
 interface StripeResponse {
-  membershipType: string;
-  subscriptionStatus: string;
-  isYearlyPlan: boolean;
-  cancelAtPeriodEnd: boolean;
+  membershipType?: string | null;
+  subscriptionStatus?: string | null;
+  isYearlyPlan?: boolean | null;
+  cancelAtPeriodEnd?: boolean | null;
 }
 
 interface UsageSummaryResponse {
-  membershipType: string;
-  billingCycleStart: string;
-  billingCycleEnd: string;
-  individualUsage: {
-    plan: {
-      used: number;
-      limit: number;
-      totalPercentUsed: number;
-    };
-  };
+  membershipType?: string | null;
+  billingCycleStart?: string | null;
+  billingCycleEnd?: string | null;
+  individualUsage?: {
+    plan?: {
+      used?: number | null;
+      limit?: number | null;
+      totalPercentUsed?: number | null;
+    } | null;
+  } | null;
 }
 
-async function getCursorToken(): Promise<string | null> {
-  try {
-    const cookie = await chrome.cookies.get({
-      url: COOKIE_URL,
-      name: COOKIE_NAME,
-    });
-    return cookie?.value ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function cursorFetch<T>(token: string, path: string): Promise<T> {
+async function cursorFetch<T>(path: string): Promise<T> {
   const resp = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      Cookie: `WorkosCursorSessionToken=${token}`,
-    },
+    headers: { Accept: "application/json" },
     credentials: "include",
+    cache: "no-store",
   });
+  if (resp.status === 401 || resp.status === 403) {
+    throw new CursorAuthenticationError("Not logged in to Cursor");
+  }
   if (!resp.ok) throw new Error(`Cursor API ${path}: HTTP ${resp.status}`);
+  if (!resp.headers.get("content-type")?.includes("application/json")) {
+    throw new CursorAuthenticationError("Not logged in to Cursor");
+  }
   return resp.json();
 }
 
@@ -59,11 +52,14 @@ function daysUntil(iso: string): number {
 export const cursorProvider: SubscriptionProvider = {
   id: "cursor",
   name: "Cursor",
+  defaultToolId: "cursor",
+  permissions: { origins: ["https://cursor.com/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const now = new Date().toISOString();
     const base: SubscriptionInfo = {
-      id: "cursor",
+      providerId: "cursor",
+      linkedToolId: "cursor",
       name: "Cursor",
       plan: "",
       price: "",
@@ -79,43 +75,48 @@ export const cursorProvider: SubscriptionProvider = {
       lastUpdated: now,
     };
 
-    const token = await getCursorToken();
-    if (!token) {
-      return { ...base, error: "Not logged in to Cursor", loginUrl: "https://cursor.com/settings" };
-    }
-
     try {
-      const [stripe, usage] = await Promise.all([
-        cursorFetch<StripeResponse>(token, "/api/auth/stripe"),
-        cursorFetch<UsageSummaryResponse>(token, "/api/usage-summary"),
-      ]);
+      const usage = await cursorFetch<UsageSummaryResponse>("/api/usage-summary");
+      let stripe: StripeResponse | null = null;
+      try {
+        stripe = await cursorFetch<StripeResponse>("/api/auth/stripe");
+      } catch {
+        // The usage summary already proves authentication and carries the current plan.
+      }
 
-      const plan = stripe.membershipType?.toUpperCase() || "FREE";
-      const cycle = stripe.isYearlyPlan ? "year" : "month";
+      const plan = (stripe?.membershipType ?? usage.membershipType ?? "hobby").toUpperCase();
+      const cycle = stripe?.isYearlyPlan ? "year" : "month";
 
       const priceMap: Record<string, Record<string, string>> = {
         PRO: { month: "$20/mo", year: "$192/yr" },
-        BUSINESS: { month: "$40/mo", year: "$384/yr" },
+        TEAM: { month: "$40/user/mo", year: "$384/user/yr" },
+        STANDARD: { month: "$40/user/mo", year: "$384/user/yr" },
       };
       const price = priceMap[plan]?.[cycle] || "";
 
-      const u = usage.individualUsage.plan;
+      const u = usage.individualUsage?.plan;
       const billingEnd = usage.billingCycleEnd;
 
       return {
         ...base,
         plan,
         price,
-        active: stripe.subscriptionStatus === "active",
-        nextBillingDate: toISODate(billingEnd),
-        daysUntilBilling: daysUntil(billingEnd),
-        usagePercent: u.totalPercentUsed,
-        usageLabel: `${u.used} / ${u.limit} requests`,
+        active: stripe?.subscriptionStatus
+          ? ["active", "trialing"].includes(stripe.subscriptionStatus)
+          : true,
+        nextBillingDate: billingEnd ? toISODate(billingEnd) : null,
+        daysUntilBilling: billingEnd ? daysUntil(billingEnd) : null,
+        usagePercent: u?.totalPercentUsed ?? null,
+        usageLabel:
+          typeof u?.used === "number" && typeof u.limit === "number"
+            ? `${u.used} / ${u.limit} requests`
+            : null,
       };
     } catch (err) {
       return {
         ...base,
         error: err instanceof Error ? err.message : "Failed to fetch",
+        loginUrl: err instanceof CursorAuthenticationError ? "https://cursor.com/settings" : null,
       };
     }
   },

@@ -10,6 +10,7 @@ import { createSubscriptionInfo, type SubscriptionInfo, type SubscriptionProvide
 const PROVIDER = {
   id: "example",
   name: "Example AI",
+  defaultToolId: "example",
 } as const;
 
 const HOME_URL = "https://example.com";
@@ -46,6 +47,7 @@ function getBillingDate(
 
 export const exampleProvider: SubscriptionProvider = {
   ...PROVIDER,
+  permissions: { origins: ["https://example.com/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const base = createSubscriptionInfo(PROVIDER, { homeUrl: HOME_URL });

@@ -319,13 +319,13 @@
 
   <p class="page-label">Legal</p>
   <h1 class="page-title">Privacy Policy</h1>
-  <p class="page-meta">Effective date: March 25, 2026 &nbsp;·&nbsp; SubLens Chrome Extension</p>
+  <p class="page-meta">Effective date: August 27, 2026 &nbsp;·&nbsp; SubLens Chrome Extension</p>
 
   <!-- SUMMARY -->
   <div class="summary">
     <div class="summary-title">TL;DR — The Short Version</div>
     <ul>
-      <li>SubLens reads your browser cookies only to authenticate with AI provider APIs on your behalf.</li>
+      <li>SubLens requests access only when you choose to connect a subscription provider.</li>
       <li>All data is stored locally in your browser using <code>chrome.storage.local</code>.</li>
       <li>No data is ever sent to our servers — we don't have any.</li>
       <li>No analytics, no tracking, no advertising.</li>
@@ -336,18 +336,18 @@
   <!-- 1 -->
   <div class="section">
     <h2><span class="sec-num">01</span> Overview</h2>
-    <p>SubLens ("the Extension") is an open-source Chrome extension that helps you track your AI spend, billing dates, and total cost across multiple AI providers. This policy explains what data the Extension accesses, how it is used, and your rights regarding that data.</p>
+    <p>SubLens ("the Extension") is an open-source Chrome extension for launching AI tools and optionally tracking subscription details from providers you connect. This policy explains what data the Extension accesses, how it is used, and your rights regarding that data.</p>
     <p>SubLens is developed and maintained as an open-source project. The full source code is available at <strong>github.com/heartleo/sublens</strong>.</p>
   </div>
 
   <!-- 2 -->
   <div class="section">
     <h2><span class="sec-num">02</span> Data We Access</h2>
-    <p>To retrieve your subscription information, the Extension accesses the following data in your browser:</p>
+    <p>To retrieve subscription information, the Extension can access the following data after you explicitly connect a provider:</p>
     <ul class="list">
       <li>
-        <span class="li-icon">🍪</span>
-        <span><strong>Session cookies</strong> — Read-only access to authentication cookies for the following domains: <code>chatgpt.com</code>, <code>claude.ai</code>, <code>github.com</code>, <code>cursor.com</code>, and <code>one.google.com</code>. These cookies are used solely to make authenticated API calls to each provider on your behalf.</span>
+        <span class="li-icon">🔐</span>
+        <span><strong>Authentication state</strong> — Host access lets the Extension make authenticated requests to the provider you connected. Chrome attaches that provider's existing sign-in state to requests; the Extension does not read or store session-cookie values.</span>
       </li>
       <li>
         <span class="li-icon">📡</span>
@@ -387,23 +387,19 @@
   <!-- 5 -->
   <div class="section">
     <h2><span class="sec-num">05</span> Permissions Explained</h2>
-    <p>The Extension requests the following Chrome permissions:</p>
+    <p>The Extension requires local storage and alarms. Provider-specific host access is optional and requested only after you click Connect:</p>
     <div class="perm-table">
       <div class="perm-row">
-        <span class="perm-key">cookies</span>
-        <span class="perm-val">Read session cookies from AI provider domains to authenticate API calls.</span>
-      </div>
-      <div class="perm-row">
         <span class="perm-key">storage</span>
-        <span class="perm-val">Save subscription data and your card order locally using chrome.storage.local.</span>
+        <span class="perm-val">Save favorites, recent launches, usage counts, preferences, and subscription snapshots locally using chrome.storage.local.</span>
       </div>
       <div class="perm-row">
         <span class="perm-key">alarms</span>
         <span class="perm-val">Schedule an hourly background refresh of subscription data.</span>
       </div>
       <div class="perm-row">
-        <span class="perm-key">host permissions</span>
-        <span class="perm-val">Make authenticated fetch requests to chatgpt.com, claude.ai, github.com, cursor.com, and one.google.com.</span>
+        <span class="perm-key">host access (optional)</span>
+        <span class="perm-val">Make authenticated requests only to subscription providers you connect: chatgpt.com, claude.ai, github.com, or cursor.com.</span>
       </div>
     </div>
   </div>

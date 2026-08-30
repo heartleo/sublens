@@ -1,7 +1,9 @@
 /** Common subscription data shape returned by all providers. */
 export interface SubscriptionInfo {
-  /** Provider identifier, e.g. "cursor" or "copilot". */
-  id: string;
+  /** Subscription Provider identifier, e.g. "cursor" or "copilot". */
+  providerId: string;
+  /** Catalog Tool represented by this snapshot, or null when there is no verified association. */
+  linkedToolId: string | null;
   /** Display name, e.g. "Cursor" or "GitHub Copilot". */
   name: string;
   /** User's plan name, e.g. "PRO", "GitHub Copilot Pro". */
@@ -31,7 +33,9 @@ export interface SubscriptionInfo {
 }
 
 /** Fields a provider can override when creating a subscription result. */
-export type SubscriptionInfoOverrides = Partial<Omit<SubscriptionInfo, "id" | "name">>;
+export type SubscriptionInfoOverrides = Partial<
+  Omit<SubscriptionInfo, "providerId" | "linkedToolId" | "name">
+>;
 
 /**
  * Create a complete subscription result with safe defaults.
@@ -40,11 +44,12 @@ export type SubscriptionInfoOverrides = Partial<Omit<SubscriptionInfo, "id" | "n
  * returned through the `error` field so one failed provider cannot stop the full refresh.
  */
 export function createSubscriptionInfo(
-  provider: Pick<SubscriptionProvider, "id" | "name">,
+  provider: Pick<SubscriptionProvider, "id" | "name" | "defaultToolId">,
   overrides: SubscriptionInfoOverrides = {}
 ): SubscriptionInfo {
   return {
-    id: provider.id,
+    providerId: provider.id,
+    linkedToolId: provider.defaultToolId,
     name: provider.name,
     plan: "",
     price: "",
@@ -71,6 +76,9 @@ export function isFreePlan(info: SubscriptionInfo): boolean {
 export interface SubscriptionProvider {
   id: string;
   name: string;
+  /** Tool normally represented by this Provider; null when association depends on fetched data. */
+  defaultToolId: string | null;
+  permissions: chrome.permissions.Permissions;
   /** Fetch current subscription info. */
   fetch(): Promise<SubscriptionInfo>;
 }

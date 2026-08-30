@@ -45,6 +45,10 @@ interface SubscriptionProvider {
 
 ## 分阶段交付
 
+> 实现状态（2026-08-27）：Phase 0、v0.2、v0.4 已完成；v0.3 已完成搜索、键盘操作和
+> Recent，Custom Tool 尚未实现；v0.5 仅完成使用次数与最近打开时间的数据基础；Commands、
+> Omnibox、Most Used UI 和 v0.6 Prompt Router 尚未实现。
+
 ### Phase 0：基线清理
 
 - 修复当前 `App.tsx` 的 ESLint Hook 错误，确保主分支四项检查可全绿。
@@ -77,9 +81,9 @@ interface SubscriptionProvider {
 - 为 Provider 增加 `toolId` 和权限声明，更新 `_template.ts`。
 - 将订阅存储升级为版本 2，并从旧的 provider ID 键迁移。
 - 把现有站点权限从 `host_permissions` 移到 `optional_host_permissions`；仅在 Connect 点击中调用 `chrome.permissions.request()`。
-- `cookies` 仅在 Cursor、Copilot 等确实调用 `chrome.cookies` 的 Provider 连接时申请。Chrome 要求 Cookie API 同时具备 `cookies` 和目标 host 权限。
+- Provider 请求统一使用目标站点 host 权限和 `credentials: include`；不读取、复制或保存会话 Cookie 值。
 - popup 与 service worker 只刷新已授权 Provider；定时任务不得触发权限弹窗。
-- Google One 仅在确认 Google AI 套餐后映射到 Gemini，普通存储套餐不得误标为 Gemini 订阅。
+- 活跃订阅 Provider 保持为 ChatGPT、Claude、GitHub Copilot 与 Cursor；旧 Google One 快照只保留迁移兼容。
 
 验收：未连接任何 Provider 时 Launcher 完整可用；每次连接只申请对应权限；拒绝权限后可恢复；升级后旧订阅缓存不丢失。
 

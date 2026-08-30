@@ -1,58 +1,132 @@
+import { createLauncher } from "../launcher";
 import { providers } from "../providers";
-import { loadSubscriptions, saveSubscription } from "../storage";
-import { isFreePlan } from "../providers/base";
-
-/** Update the toolbar icon badge with the paid subscription count. */
-async function updateBadge(): Promise<void> {
-  const subs = await loadSubscriptions();
-  const count = Object.values(subs).filter((s) => s.active && !isFreePlan(s)).length;
-  chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-  chrome.action.setBadgeBackgroundColor({ color: "#7c3aed" });
-}
+import { isFreePlan, type SubscriptionInfo } from "../providers/base";
+import { extensionStorage } from "../storage";
+import { getBuiltInTool } from "../tools";
 
 const ALARM_NAME = "sublens-refresh";
-const REFRESH_INTERVAL_MINUTES = 15; // refresh every 15 minutes
+const REFRESH_INTERVAL_MINUTES = 15;
 
-/** Refresh all providers and save results. */
-async function refreshAll(): Promise<void> {
+async function isProviderConnected(providerId: string): Promise<boolean> {
+  const provider = providers.find((candidate) => candidate.id === providerId);
+  return provider ? chrome.permissions.contains(provider.permissions) : false;
+}
+
+async function updateBadge(): Promise<void> {
+  const state = await extensionStorage.load();
+  const connectedProviderIds = new Set(
+    (
+      await Promise.all(
+        providers.map(async (provider) => ({
+          providerId: provider.id,
+          connected: await chrome.permissions.contains(provider.permissions),
+        }))
+      )
+    )
+      .filter(({ connected }) => connected)
+      .map(({ providerId }) => providerId)
+  );
+  const count = Object.values(state.subscriptions).filter(
+    (snapshot) =>
+      connectedProviderIds.has(snapshot.providerId) && snapshot.active && !isFreePlan(snapshot)
+  ).length;
+  await chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
+  await chrome.action.setBadgeBackgroundColor({ color: "#7c3aed" });
+}
+
+async function refreshProvider(providerId: string): Promise<SubscriptionInfo | null> {
+  const provider = providers.find((candidate) => candidate.id === providerId);
+  if (!provider || !(await isProviderConnected(provider.id))) return null;
+  const snapshot = await provider.fetch();
+  await extensionStorage.saveSubscription(snapshot);
+  return snapshot;
+}
+
+async function refreshConnectedProviders(): Promise<void> {
   for (const provider of providers) {
     try {
-      const info = await provider.fetch();
-      await saveSubscription(info);
+      await refreshProvider(provider.id);
     } catch {
-      // Individual provider failure is stored as error in the info.
+      // Providers return account failures through SubscriptionInfo.error.
     }
   }
   await updateBadge();
 }
 
-// Set up periodic alarm.
-chrome.alarms.create(ALARM_NAME, {
-  periodInMinutes: REFRESH_INTERVAL_MINUTES,
+const launcher = createLauncher({
+  async findTool(toolId) {
+    const builtIn = getBuiltInTool(toolId);
+    if (builtIn) return builtIn;
+    return (await extensionStorage.load()).customTools.find((tool) => tool.id === toolId) ?? null;
+  },
+  async openTab(url) {
+    await chrome.tabs.create({ url });
+  },
+  async recordLaunch(toolId, openedAt) {
+    await extensionStorage.recordLaunch(toolId, openedAt);
+  },
+  now: () => new Date(),
 });
+
+chrome.alarms.create(ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) {
-    refreshAll();
-  }
+  if (alarm.name === ALARM_NAME) void refreshConnectedProviders();
 });
 
-// Refresh on install/update.
 chrome.runtime.onInstalled.addListener(() => {
-  refreshAll();
+  void refreshConnectedProviders();
 });
 
-// Update badge on service worker startup from cached data.
-updateBadge();
+chrome.permissions.onRemoved.addListener(() => {
+  void updateBadge();
+});
 
-// Listen for manual refresh requests from popup.
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+void updateBadge();
+
+chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+  if (typeof message !== "object" || message === null || !("type" in message)) return;
+
   if (message.type === "refresh") {
-    refreshAll().then(() => sendResponse({ ok: true }));
-    return true; // keep message channel open for async response
+    void refreshConnectedProviders().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === "refresh-provider" && "providerId" in message) {
+    void refreshProvider(String(message.providerId))
+      .then(async (snapshot) => {
+        await updateBadge();
+        sendResponse({
+          ok: snapshot !== null && snapshot.error === null,
+          error: snapshot?.error ?? (snapshot ? null : "Provider is not connected"),
+        });
+      })
+      .catch(() => sendResponse({ ok: false, error: "Provider refresh failed" }));
+    return true;
   }
   if (message.type === "update-badge") {
-    updateBadge().then(() => sendResponse({ ok: true }));
+    void updateBadge().then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === "open-tool" && "toolId" in message) {
+    void launcher.openTool(String(message.toolId)).then(sendResponse);
+    return true;
+  }
+  if (message.type === "set-favorite" && "toolId" in message && "favorite" in message) {
+    void extensionStorage
+      .setFavorite(String(message.toolId), Boolean(message.favorite))
+      .then(() => sendResponse({ ok: true }));
+    return true;
+  }
+  if (message.type === "open-provider-login" && "providerId" in message) {
+    void extensionStorage.load().then(async (state) => {
+      const snapshot = state.subscriptions[String(message.providerId)];
+      if (snapshot?.loginUrl?.startsWith("https://")) {
+        await chrome.tabs.create({ url: snapshot.loginUrl });
+        sendResponse({ ok: true });
+      } else {
+        sendResponse({ ok: false });
+      }
+    });
     return true;
   }
 });

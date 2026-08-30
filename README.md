@@ -1,7 +1,7 @@
 <h1 align="center">SubLens</h1>
 
 <p align="center">
-  Track all your AI subscriptions - pricing and billing cycles at a glance.
+  Launch AI tools fast, then keep connected subscriptions in view.
 </p>
 
 <p align="center">
@@ -18,14 +18,15 @@
 
 ## Features
 
-- **Multi-provider dashboard** — ChatGPT, Claude, GitHub Copilot, Google One, Cursor
-- **Subscription cost tracking** — plan pricing, discounted/original price comparison, total monthly spend
-- **Billing cycle alerts** — next billing date and days remaining
-- **Toolbar badge** — paid subscription count displayed on the extension icon
-- **Drag-to-reorder** — arrange cards in your preferred order
+- **Launcher-first popup** — open 14 built-in AI tools from a compact catalog
+- **Fast search** — match names, aliases, categories, subcategories, and tags
+- **Keyboard navigation** — `Ctrl/Cmd + K`, arrow keys, Enter, and Escape
+- **Favorites and recents** — keep frequent tools one click away with local persistence
+- **Optional subscription connections** — connect ChatGPT, Claude, GitHub Copilot, or Cursor individually
+- **Subscription summary** — view connected plans, monthly spend, and paid-plan badge count
 - **Dark / Light / System theme** — auto-follows OS preference
 - **Multi-language** — English and Simplified Chinese, with locale-aware date and price formatting
-- **Privacy-first** — all data stored locally, no external analytics
+- **Privacy-first** — provider access is requested on demand; data stays in local extension storage
 
 ## Install
 
@@ -54,23 +55,28 @@ npm run build
 2. Open `chrome://extensions` → enable **Developer mode**
 3. Click **Load unpacked** → select the `dist/` folder
 
-## Supported Providers
+## Built-in Tools
+
+ChatGPT, Claude, Gemini, DeepSeek, Grok, Midjourney, Runway, Kling AI, Cursor, GitHub
+Copilot, Codex, Hugging Face, OpenRouter, and NotebookLM.
+
+## Subscription Providers
 
 | Provider                                                         | Price | Billing Cycle |
 | ---------------------------------------------------------------- | ----- | ------------- |
 | <img src="public/logos/chatgpt.svg" width="16" /> ChatGPT        | Yes   | Yes           |
 | <img src="public/logos/claude.svg" width="16" /> Claude          | Yes   | Yes           |
 | <img src="public/logos/copilot.svg" width="16" /> GitHub Copilot | Yes   | Yes           |
-| <img src="public/logos/googleone.svg" width="16" /> Google One   | Yes   | Yes           |
 | <img src="public/logos/cursor.svg" width="16" /> Cursor          | Yes   | Yes           |
 
 ## Usage Tips
 
-- **Double-click the SubLens logo** to manually refresh all subscriptions
-- **Double-click a subscription card** to open the service's dashboard
-- **Double-click the "Paid" counter** to highlight paid subscriptions
+- **Click any tool** to open it in a new tab
+- **Press `Ctrl/Cmd + K`** to focus search, then use arrow keys and Enter to launch
+- **Click the star** to add or remove a favorite
+- **Open Subscriptions** to connect only the providers you want to track
+- **Click the SubLens logo** to refresh connected subscriptions
 - **Click the language button** (EN/ZH) to switch between English and Chinese
-- **Drag cards** to reorder them — your order is saved automatically
 
 ## Development
 
@@ -80,6 +86,7 @@ npm run dev          # start dev server
 npm run build        # type-check + production build
 npm run build:fast   # production build (skip type-check)
 npm run lint         # ESLint
+npm test             # Vitest unit tests
 npm run format       # Prettier
 ```
 
@@ -89,7 +96,7 @@ npm run format       # Prettier
 2. Replace the provider metadata, response type guard, endpoint, and response mapping
 3. Return failures through `SubscriptionInfo.error`; do not throw from `fetch()`
 4. Register the provider in `src/providers/index.ts`
-5. Add the required host pattern to `manifest.json`
+5. Add the required host pattern to `optional_host_permissions` in `manifest.json`
 6. Add an SVG logo to `public/logos/` and update the privacy documentation when data access changes
 7. Run `npm run lint`, `npm run typecheck`, and `npm run build`
 

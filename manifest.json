@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
   "name": "SubLens",
-  "version": "0.1.1",
-  "description": "Track your AI subscriptions - ChatGPT, Claude, GitHub Copilot and more.",
-  "permissions": ["cookies", "storage", "alarms"],
-  "host_permissions": [
+  "version": "0.2.0",
+  "description": "Launch AI tools fast and track connected subscriptions locally.",
+  "permissions": ["storage", "alarms"],
+  "optional_host_permissions": [
     "https://cursor.com/*",
     "https://github.com/*",
     "https://chatgpt.com/*",
-    "https://claude.ai/*",
-    "https://one.google.com/*"
+    "https://claude.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

@@ -56,11 +56,14 @@ function daysUntil(iso: string): number {
 export const chatgptProvider: SubscriptionProvider = {
   id: "chatgpt",
   name: "ChatGPT",
+  defaultToolId: "chatgpt",
+  permissions: { origins: ["https://chatgpt.com/*"] },
 
   async fetch(): Promise<SubscriptionInfo> {
     const now = new Date().toISOString();
     const base: SubscriptionInfo = {
-      id: "chatgpt",
+      providerId: "chatgpt",
+      linkedToolId: "chatgpt",
       name: "ChatGPT",
       plan: "",
       price: "",
