@@ -213,10 +213,6 @@ input:focus-visible {
   color: var(--accent-strong);
 }
 
-.refresh-button.is-refreshing svg {
-  animation: refresh-spin 800ms linear infinite;
-}
-
 .icon-button svg,
 .search-icon {
   width: 18px;
@@ -769,7 +765,23 @@ section {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  font-size: 11px;
+}
+
+.tool-logo-fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.tool-logo-medium .tool-logo-fallback {
+  font-size: 19px;
+}
+
+.tool-logo-small .tool-logo-fallback {
+  font-size: 15px;
 }
 
 .tool-logo img {
@@ -894,6 +906,10 @@ section {
 .panel-header {
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.panel-header > div:first-child {
+  min-width: 0;
 }
 
 .panel-header h2 {
@@ -1053,12 +1069,6 @@ section {
 .notice-toast.is-dialog-open {
   top: 12px;
   bottom: auto;
-}
-
-@keyframes refresh-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (max-width: 340px) {

@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "../../tools";
-import { ToolLogo } from "./ToolLogo";
+import { ToolLogo } from "../../components/ToolLogo";
 
 interface ToolCardProps {
   tool: ToolDefinition;

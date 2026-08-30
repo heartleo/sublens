@@ -2,7 +2,7 @@ import { createLauncher } from "../launcher";
 import { providers } from "../providers";
 import { isFreePlan, type SubscriptionInfo } from "../providers/base";
 import { extensionStorage } from "../storage";
-import { getBuiltInTool } from "../tools";
+import { findTool } from "../tools";
 
 const ALARM_NAME = "sublens-refresh";
 const REFRESH_INTERVAL_MINUTES = 15;
@@ -55,9 +55,8 @@ async function refreshConnectedProviders(): Promise<void> {
 
 const launcher = createLauncher({
   async findTool(toolId) {
-    const builtIn = getBuiltInTool(toolId);
-    if (builtIn) return builtIn;
-    return (await extensionStorage.load()).customTools.find((tool) => tool.id === toolId) ?? null;
+    const state = await extensionStorage.load();
+    return findTool(toolId, state.customTools);
   },
   async openTab(url) {
     await chrome.tabs.create({ url });

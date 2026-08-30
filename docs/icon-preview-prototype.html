@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SubLens 图标预览（Prototype）</title>
+    <style>
+      /* Three icon-review views, switchable via ?variant=, for choosing whether to refine this draft. */
+      :root {
+        color-scheme: light;
+        --page: #f3f2f7;
+        --surface: rgba(255, 255, 255, 0.9);
+        --surface-solid: #fff;
+        --text: #1d1b24;
+        --muted: #686474;
+        --subtle: #8e8998;
+        --border: rgba(49, 39, 68, 0.12);
+        --purple: #6d36db;
+        --purple-soft: #eee6ff;
+        --shadow: 0 24px 70px rgba(47, 35, 72, 0.13);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--page);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 32px 24px 120px;
+        background:
+          radial-gradient(circle at 14% 0%, rgba(127, 71, 238, 0.14), transparent 30%),
+          radial-gradient(circle at 90% 12%, rgba(231, 88, 240, 0.1), transparent 28%), var(--page);
+        color: var(--text);
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "SF Pro Display",
+          "Segoe UI",
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      button:focus-visible {
+        outline: 3px solid rgba(109, 54, 219, 0.32);
+        outline-offset: 3px;
+      }
+
+      .shell {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: var(--purple);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(30px, 5vw, 54px);
+        letter-spacing: -0.055em;
+        line-height: 0.98;
+      }
+
+      .lede {
+        max-width: 670px;
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .draft-badge {
+        flex: 0 0 auto;
+        padding: 9px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        backdrop-filter: blur(18px);
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.is-active {
+        display: block;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(24px);
+      }
+
+      .compare-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .icon-study {
+        display: grid;
+        min-width: 0;
+        gap: 20px;
+        padding: 24px;
+      }
+
+      .study-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .study-header h2,
+      .section-title h2 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: -0.025em;
+      }
+
+      .study-header span {
+        color: var(--subtle);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .hero-icon-wrap {
+        display: grid;
+        min-height: 340px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background:
+          linear-gradient(45deg, #f2f0f5 25%, transparent 25%),
+          linear-gradient(-45deg, #f2f0f5 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #f2f0f5 75%),
+          linear-gradient(-45deg, transparent 75%, #f2f0f5 75%), #fff;
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0;
+        background-size: 20px 20px;
+      }
+
+      .hero-icon {
+        width: min(270px, 72%);
+        aspect-ratio: 1;
+        object-fit: contain;
+        filter: drop-shadow(0 20px 28px rgba(66, 35, 112, 0.2));
+      }
+
+      .scale-strip {
+        display: flex;
+        min-width: 0;
+        align-items: flex-end;
+        justify-content: center;
+        gap: clamp(18px, 5vw, 46px);
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-solid);
+      }
+
+      .scale-item {
+        display: grid;
+        place-items: center;
+        gap: 8px;
+        color: var(--subtle);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .scale-item img {
+        display: block;
+        object-fit: contain;
+      }
+
+      .decision-note {
+        margin: 18px 0 0;
+        padding: 18px 20px;
+        border: 1px solid rgba(109, 54, 219, 0.2);
+        border-radius: 18px;
+        background: var(--purple-soft);
+        color: #4e288f;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .contexts-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+        gap: 18px;
+      }
+
+      .context-stack,
+      .popup-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .browser-window {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: #fff;
+        box-shadow: var(--shadow);
+      }
+
+      .browser-window.dark {
+        border-color: #343743;
+        background: #15161b;
+        color: #f5f3fa;
+      }
+
+      .browser-chrome {
+        display: flex;
+        height: 60px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--border);
+        background: #f8f8fa;
+      }
+
+      .dark .browser-chrome {
+        border-color: #343743;
+        background: #22242c;
+      }
+
+      .traffic {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #d4d1d9;
+        box-shadow:
+          16px 0 #d4d1d9,
+          32px 0 #d4d1d9;
+      }
+
+      .address {
+        height: 34px;
+        flex: 1;
+        margin-left: 34px;
+        border-radius: 17px;
+        background: #ececf0;
+      }
+
+      .dark .address {
+        background: #30333d;
+      }
+
+      .toolbar-icon {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: rgba(109, 54, 219, 0.11);
+      }
+
+      .toolbar-icon img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+      }
+
+      .browser-body {
+        min-height: 190px;
+        padding: 24px;
+      }
+
+      .browser-body strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 17px;
+      }
+
+      .browser-body p {
+        max-width: 430px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .dark .browser-body p {
+        color: #a8aab5;
+      }
+
+      .extensions-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: #fff;
+      }
+
+      .extensions-card img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+      }
+
+      .extension-copy {
+        display: grid;
+        gap: 3px;
+      }
+
+      .extension-copy strong {
+        font-size: 14px;
+      }
+
+      .extension-copy span {
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .switch {
+        width: 34px;
+        height: 20px;
+        padding: 2px;
+        border-radius: 999px;
+        background: var(--purple);
+      }
+
+      .switch::after {
+        display: block;
+        width: 16px;
+        height: 16px;
+        margin-left: auto;
+        border-radius: 50%;
+        background: #fff;
+        content: "";
+      }
+
+      .popup-preview {
+        min-height: 360px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: #f7f6fa;
+        box-shadow: var(--shadow);
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .popup-header img {
+        width: 34px;
+        height: 34px;
+        object-fit: contain;
+      }
+
+      .popup-header div {
+        display: grid;
+      }
+
+      .popup-header strong {
+        font-size: 14px;
+      }
+
+      .popup-header small {
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .popup-search,
+      .popup-card {
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+
+      .popup-search {
+        height: 52px;
+        border-radius: 17px;
+      }
+
+      .popup-card {
+        display: flex;
+        min-height: 62px;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 16px;
+      }
+
+      .popup-card i {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: #eeeaf7;
+      }
+
+      .popup-card span {
+        width: 44%;
+        height: 8px;
+        border-radius: 999px;
+        background: #d8d4df;
+      }
+
+      .store-card {
+        display: grid;
+        place-items: center;
+        padding: 26px;
+        border-radius: 24px;
+        background: linear-gradient(155deg, #201836, #100c19);
+        color: #fff;
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .store-card img {
+        width: 128px;
+        height: 128px;
+        object-fit: contain;
+        filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.28));
+      }
+
+      .store-card strong {
+        margin-top: 18px;
+        font-size: 18px;
+      }
+
+      .store-card span {
+        margin-top: 5px;
+        color: #aaa3b9;
+        font-size: 11px;
+      }
+
+      .scale-lab {
+        overflow: hidden;
+      }
+
+      .lab-header {
+        padding: 22px 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .lab-header h2 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+
+      .lab-header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .lab-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .lab-surface {
+        display: grid;
+        min-height: 420px;
+        align-content: center;
+        justify-items: center;
+        gap: 28px;
+        padding: 30px;
+      }
+
+      .lab-surface.light {
+        background: #fff;
+      }
+
+      .lab-surface.dark {
+        background: #111218;
+        color: #f4f1fa;
+      }
+
+      .lab-surface h3 {
+        margin: 0;
+        color: var(--subtle);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .size-row {
+        display: flex;
+        max-width: 100%;
+        align-items: flex-end;
+        justify-content: center;
+        gap: clamp(14px, 4vw, 36px);
+      }
+
+      .size-row .scale-item {
+        color: inherit;
+        opacity: 0.86;
+      }
+
+      .favicon-tab {
+        display: flex;
+        width: min(310px, 100%);
+        height: 42px;
+        align-items: center;
+        gap: 9px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px 12px 4px 4px;
+        background: #f1eff4;
+        color: #3e3a47;
+        font-size: 12px;
+      }
+
+      .dark .favicon-tab {
+        border-color: #343743;
+        background: #262832;
+        color: #f0edf6;
+      }
+
+      .favicon-tab img {
+        width: 16px;
+        height: 16px;
+        object-fit: contain;
+      }
+
+      .prototype-switcher {
+        position: fixed;
+        z-index: 50;
+        bottom: max(22px, env(safe-area-inset-bottom));
+        left: 50%;
+        display: grid;
+        min-width: min(420px, calc(100vw - 28px));
+        grid-template-columns: 52px minmax(0, 1fr) 52px;
+        align-items: center;
+        overflow: hidden;
+        transform: translateX(-50%);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        background: rgba(22, 18, 30, 0.94);
+        color: #fff;
+        box-shadow: 0 18px 48px rgba(20, 14, 31, 0.35);
+        backdrop-filter: blur(18px);
+      }
+
+      .prototype-switcher button {
+        display: grid;
+        width: 52px;
+        height: 52px;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: #fff;
+        cursor: pointer;
+        font-size: 22px;
+      }
+
+      .prototype-switcher button:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .variant-state {
+        display: grid;
+        place-items: center;
+        gap: 2px;
+        min-width: 0;
+        font-size: 12px;
+        font-weight: 750;
+        text-align: center;
+      }
+
+      .variant-state small {
+        max-width: 100%;
+        overflow: hidden;
+        color: #aaa4b5;
+        font-size: 9px;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 760px) {
+        body {
+          padding: 22px 14px 110px;
+        }
+
+        .topbar,
+        .study-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .compare-grid,
+        .contexts-layout,
+        .lab-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-icon-wrap {
+          min-height: 280px;
+        }
+
+        .lab-surface {
+          min-height: 330px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Throwaway icon prototype</span>
+          <h1>SubLens 图标可读性预览</h1>
+          <p class="lede">
+            这是一张尚未安装的方向稿。请重点观察 16px
+            是否仍能辨认、镜头语义是否过强，以及它是否比原始 S 图标更像一个独立品牌。
+          </p>
+        </div>
+        <span class="draft-badge">Draft · 未替换扩展</span>
+      </header>
+
+      <section class="view" data-variant="A" aria-label="原图与草稿对比">
+        <div class="compare-grid">
+          <article class="panel icon-study">
+            <div class="study-header">
+              <h2>当前图标</h2>
+              <span>Original</span>
+            </div>
+            <div class="hero-icon-wrap">
+              <img class="hero-icon" src="../public/icons/icon.png" alt="当前 SubLens 图标" />
+            </div>
+            <div class="scale-strip" aria-label="当前图标尺寸预览">
+              <span class="scale-item"
+                ><img src="../public/icons/icon.png" width="16" height="16" alt="" />16</span
+              >
+              <span class="scale-item"
+                ><img src="../public/icons/icon.png" width="24" height="24" alt="" />24</span
+              >
+              <span class="scale-item"
+                ><img src="../public/icons/icon.png" width="48" height="48" alt="" />48</span
+              >
+              <span class="scale-item"
+                ><img src="../public/icons/icon.png" width="96" height="96" alt="" />96</span
+              >
+            </div>
+          </article>
+
+          <article class="panel icon-study">
+            <div class="study-header">
+              <h2>GPT 方向稿</h2>
+              <span>Candidate 01</span>
+            </div>
+            <div class="hero-icon-wrap">
+              <img
+                class="hero-icon"
+                src="assets/sublens-icon-gpt-draft.png"
+                alt="GPT 生成的 SubLens 图标方向稿"
+              />
+            </div>
+            <div class="scale-strip" aria-label="方向稿尺寸预览">
+              <span class="scale-item"
+                ><img
+                  src="assets/sublens-icon-gpt-draft.png"
+                  width="16"
+                  height="16"
+                  alt=""
+                />16</span
+              >
+              <span class="scale-item"
+                ><img
+                  src="assets/sublens-icon-gpt-draft.png"
+                  width="24"
+                  height="24"
+                  alt=""
+                />24</span
+              >
+              <span class="scale-item"
+                ><img
+                  src="assets/sublens-icon-gpt-draft.png"
+                  width="48"
+                  height="48"
+                  alt=""
+                />48</span
+              >
+              <span class="scale-item"
+                ><img
+                  src="assets/sublens-icon-gpt-draft.png"
+                  width="96"
+                  height="96"
+                  alt=""
+                />96</span
+              >
+            </div>
+          </article>
+        </div>
+        <p class="decision-note">
+          当前判断：新稿的“镜头”记忆点更强，但内层高光偏多。若选这个方向，终稿应进一步扁平化镜片并清理边缘噪点。
+        </p>
+      </section>
+
+      <section class="view" data-variant="B" aria-label="Chrome 实际上下文预览">
+        <div class="contexts-layout">
+          <div class="context-stack">
+            <article class="browser-window">
+              <div class="browser-chrome">
+                <span class="traffic"></span>
+                <span class="address"></span>
+                <span class="toolbar-icon"
+                  ><img src="assets/sublens-icon-gpt-draft.png" alt="SubLens 工具栏图标"
+                /></span>
+              </div>
+              <div class="browser-body">
+                <strong>Chrome 浅色工具栏 · 20px</strong>
+                <p>工具栏尺寸是最严格的测试：轮廓要先被看见，镜片细节只能作为第二层识别。</p>
+              </div>
+            </article>
+
+            <article class="browser-window dark">
+              <div class="browser-chrome">
+                <span class="traffic"></span>
+                <span class="address"></span>
+                <span class="toolbar-icon"
+                  ><img src="assets/sublens-icon-gpt-draft.png" alt="深色模式 SubLens 工具栏图标"
+                /></span>
+              </div>
+              <div class="browser-body">
+                <strong>Chrome 深色工具栏 · 20px</strong>
+                <p>紫色外形在深色背景仍需保持边缘清楚，不能依赖外围阴影制造对比。</p>
+              </div>
+            </article>
+
+            <article class="extensions-card">
+              <img src="assets/sublens-icon-gpt-draft.png" alt="SubLens 48px 图标" />
+              <span class="extension-copy">
+                <strong>SubLens</strong>
+                <span>Launch AI tools fast and track connected subscriptions locally.</span>
+              </span>
+              <span class="switch" aria-label="扩展已启用"></span>
+            </article>
+          </div>
+
+          <div class="popup-stack">
+            <article class="popup-preview">
+              <div class="popup-header">
+                <img src="assets/sublens-icon-gpt-draft.png" alt="SubLens 弹窗品牌图标" />
+                <div><strong>SubLens</strong><small>AI launcher</small></div>
+              </div>
+              <div class="popup-search"></div>
+              <div class="popup-card"><i></i><span></span></div>
+              <div class="popup-card"><i></i><span></span></div>
+              <div class="popup-card"><i></i><span></span></div>
+            </article>
+            <article class="store-card">
+              <img src="assets/sublens-icon-gpt-draft.png" alt="SubLens 商店 128px 图标" />
+              <strong>SubLens</strong>
+              <span>Chrome Web Store listing context</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-variant="C" aria-label="图标尺寸实验室">
+        <article class="panel scale-lab">
+          <div class="lab-header">
+            <h2>Scale lab</h2>
+            <p>同一张草稿，不做锐化或特殊缩放；检查系统实际插值后的表现。</p>
+          </div>
+          <div class="lab-grid">
+            <section class="lab-surface light">
+              <h3>Light surfaces</h3>
+              <div class="size-row">
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="16"
+                    height="16"
+                    alt="16px 草稿图标"
+                  />16</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="20"
+                    height="20"
+                    alt="20px 草稿图标"
+                  />20</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="32"
+                    height="32"
+                    alt="32px 草稿图标"
+                  />32</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="48"
+                    height="48"
+                    alt="48px 草稿图标"
+                  />48</span
+                >
+              </div>
+              <div class="favicon-tab">
+                <img src="assets/sublens-icon-gpt-draft.png" alt="SubLens favicon" />
+                <span>SubLens — AI launcher</span>
+              </div>
+            </section>
+            <section class="lab-surface dark">
+              <h3>Dark surfaces</h3>
+              <div class="size-row">
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="16"
+                    height="16"
+                    alt="16px 深色背景草稿图标"
+                  />16</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="20"
+                    height="20"
+                    alt="20px 深色背景草稿图标"
+                  />20</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="32"
+                    height="32"
+                    alt="32px 深色背景草稿图标"
+                  />32</span
+                >
+                <span class="scale-item"
+                  ><img
+                    src="assets/sublens-icon-gpt-draft.png"
+                    width="48"
+                    height="48"
+                    alt="48px 深色背景草稿图标"
+                  />48</span
+                >
+              </div>
+              <div class="favicon-tab">
+                <img src="assets/sublens-icon-gpt-draft.png" alt="深色标签页 SubLens favicon" />
+                <span>SubLens — AI launcher</span>
+              </div>
+            </section>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <nav class="prototype-switcher" aria-label="预览视图切换">
+      <button type="button" id="previous" aria-label="上一个预览">←</button>
+      <span class="variant-state">
+        <strong id="variant-label">A · 原图对比</strong>
+        <small id="variant-detail">State: comparison · draft not applied</small>
+      </span>
+      <button type="button" id="next" aria-label="下一个预览">→</button>
+    </nav>
+
+    <script>
+      const variants = [
+        { key: "A", name: "原图对比", detail: "comparison · draft not applied" },
+        { key: "B", name: "Chrome 场景", detail: "toolbar · extensions · popup · store" },
+        { key: "C", name: "尺寸实验室", detail: "16 · 20 · 32 · 48 · light · dark" },
+      ];
+
+      function currentIndex() {
+        const key = new URLSearchParams(location.search).get("variant")?.toUpperCase();
+        const index = variants.findIndex((variant) => variant.key === key);
+        return index < 0 ? 0 : index;
+      }
+
+      function renderVariant(index, updateUrl = false) {
+        const variant = variants[index];
+        document.querySelectorAll(".view").forEach((view) => {
+          view.classList.toggle("is-active", view.dataset.variant === variant.key);
+        });
+        document.querySelector("#variant-label").textContent = `${variant.key} · ${variant.name}`;
+        document.querySelector("#variant-detail").textContent = `State: ${variant.detail}`;
+        document.title = `SubLens Icon · ${variant.key} ${variant.name}`;
+        if (updateUrl) {
+          const url = new URL(location.href);
+          url.searchParams.set("variant", variant.key);
+          history.replaceState(null, "", url);
+        }
+      }
+
+      function cycle(direction) {
+        renderVariant((currentIndex() + direction + variants.length) % variants.length, true);
+      }
+
+      document.querySelector("#previous").addEventListener("click", () => cycle(-1));
+      document.querySelector("#next").addEventListener("click", () => cycle(1));
+      document.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        if (event.target.matches("input, textarea, [contenteditable]")) return;
+        event.preventDefault();
+        cycle(event.key === "ArrowRight" ? 1 : -1);
+      });
+
+      renderVariant(currentIndex());
+    </script>
+  </body>
+</html>

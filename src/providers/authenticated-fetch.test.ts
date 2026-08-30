@@ -122,6 +122,19 @@ describe("authenticated provider requests", () => {
     }
   });
 
+  it("normalizes the GitHub Copilot free tier", async () => {
+    const billingHtml = `
+      <script data-target="react-app.embeddedData">
+        {"payload":{"copilotForIndividualsData":{"onFreeTier":true}}}
+      </script>
+    `;
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValue(new Response(billingHtml)));
+
+    const result = await copilotProvider.fetch();
+
+    expect(result).toMatchObject({ plan: "Free", price: "", active: true, error: null });
+  });
+
   it("lets Chrome attach Cursor cookies without exposing them as request headers", async () => {
     vi.stubGlobal("chrome", {});
     const fetchMock = vi
@@ -156,6 +169,23 @@ describe("authenticated provider requests", () => {
       expect(requestHeaders(init).has("Cookie")).toBe(false);
       expect(requestHeaders(init).has("User-Agent")).toBe(false);
     }
+  });
+
+  it("normalizes the Cursor hobby tier as Free", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json({
+          membershipType: "hobby",
+          individualUsage: { plan: { used: 5, limit: 50, totalPercentUsed: 10 } },
+        })
+      )
+      .mockResolvedValueOnce(Response.json({ membershipType: "hobby", subscriptionStatus: null }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await cursorProvider.fetch();
+
+    expect(result).toMatchObject({ plan: "Free", price: "", active: true, error: null });
   });
 
   it("keeps the active subscription registry limited to the four supported services", () => {

@@ -1,39 +1,31 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getMessages, I18nContext, LocaleContext, type Locale } from "../i18n";
+import { applyTheme } from "../appearance";
 import { createPermissionManager } from "../permissions";
+import { preferencesStore, type Preferences, type ThemeMode } from "../preferences";
 import { providers } from "../providers";
 import { isFreePlan } from "../providers/base";
 import { extensionStorage, type ExtensionState } from "../storage";
 import {
-  getBuiltInTool,
-  listBuiltInTools,
-  searchBuiltInTools,
+  listTools,
+  orderTools as orderCatalogTools,
+  searchTools,
   type ToolCategory,
   type ToolDefinition,
 } from "../tools";
 import { SubscriptionPanel } from "./components/SubscriptionPanel";
 import { ToolCard } from "./components/ToolCard";
-import { ToolLogo } from "./components/ToolLogo";
+import { ToolLogo } from "../components/ToolLogo";
 import "./styles.css";
 
-type ThemeMode = "system" | "light" | "dark";
 type CategoryFilter = "all" | ToolCategory;
 type View = "home" | "tools";
 type DropPosition = "before" | "after";
 
-const locales: Locale[] = ["en", "zh"];
 const themes: ThemeMode[] = ["light", "dark", "system"];
 const views: View[] = ["home", "tools"];
 const categories = ["all", "chat", "create", "code", "explore"] as const;
 const defaultFavoriteIds = ["chatgpt", "claude", "cursor"];
-const tools = listBuiltInTools();
-const categoryCounts = tools.reduce<Record<ToolCategory, number>>(
-  (counts, tool) => {
-    counts[tool.category] += 1;
-    return counts;
-  },
-  { chat: 0, create: 0, code: 0, explore: 0 }
-);
 const permissionManager = createPermissionManager(
   providers.map((provider) => ({
     providerId: provider.id,
@@ -45,16 +37,6 @@ const permissionManager = createPermissionManager(
     remove: (permissions) => chrome.permissions.remove(permissions),
   }
 );
-
-function applyTheme(theme: ThemeMode): void {
-  const root = document.documentElement;
-  root.classList.add("theme-changing");
-  if (theme === "system") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", theme);
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => root.classList.remove("theme-changing"));
-  });
-}
 
 function resetPopupScroll(): void {
   document.body.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -80,25 +62,6 @@ function categoryLabel(category: ToolCategory, locale: Locale): string {
   return labels[locale][category];
 }
 
-function orderTools(toolOrder: readonly string[]): readonly ToolDefinition[] {
-  const toolsById = new Map(tools.map((tool) => [tool.id, tool]));
-  const ordered: ToolDefinition[] = [];
-  const seen = new Set<string>();
-
-  for (const toolId of toolOrder) {
-    const tool = toolsById.get(toolId);
-    if (!tool || seen.has(toolId)) continue;
-    ordered.push(tool);
-    seen.add(toolId);
-  }
-
-  for (const tool of tools) {
-    if (!seen.has(tool.id)) ordered.push(tool);
-  }
-
-  return ordered;
-}
-
 function moveTool(
   currentTools: readonly ToolDefinition[],
   sourceId: string,
@@ -112,18 +75,21 @@ function moveTool(
   return nextIds;
 }
 
-export default function App() {
+interface AppProps {
+  initialPreferences: Preferences;
+}
+
+export default function App({ initialPreferences }: AppProps) {
   const [state, setState] = useState<ExtensionState | null>(null);
   const [connections, setConnections] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const [activeView, setActiveView] = useState<View>("home");
+  const [activeView, setActiveView] = useState<View>(initialPreferences.defaultView);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [theme, setTheme] = useState<ThemeMode>("system");
-  const [locale, setLocale] = useState<Locale>("en");
+  const [theme, setTheme] = useState<ThemeMode>(initialPreferences.theme);
+  const [locale] = useState<Locale>(initialPreferences.locale);
   const [subscriptionsOpen, setSubscriptionsOpen] = useState(false);
   const [pendingProviderId, setPendingProviderId] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState("");
   const [draggingToolId, setDraggingToolId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
@@ -162,14 +128,8 @@ export default function App() {
             [provider.id, await permissionManager.isConnected(provider.id)] as const
         )
       ),
-      chrome.storage.local.get(["theme", "locale"]),
-    ]).then(([nextState, connectionEntries, preferences]) => {
+    ]).then(([nextState, connectionEntries]) => {
       if (!active) return;
-      const savedTheme = (preferences.theme as ThemeMode | undefined) ?? "system";
-      const savedLocale = (preferences.locale as Locale | undefined) ?? "en";
-      applyTheme(savedTheme);
-      setTheme(savedTheme);
-      setLocale(savedLocale);
       setState(nextState);
       setConnections(Object.fromEntries(connectionEntries));
     });
@@ -219,9 +179,27 @@ export default function App() {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  const orderedTools = useMemo(() => orderTools(state?.toolOrder ?? []), [state?.toolOrder]);
+  const catalogTools = useMemo(
+    () => listTools(state?.customTools ?? [], state?.hiddenBuiltInTools ?? []),
+    [state?.customTools, state?.hiddenBuiltInTools]
+  );
+  const orderedTools = useMemo(
+    () => orderCatalogTools(catalogTools, state?.toolOrder ?? []),
+    [catalogTools, state?.toolOrder]
+  );
+  const categoryCounts = useMemo(
+    () =>
+      orderedTools.reduce<Record<ToolCategory, number>>(
+        (counts, tool) => {
+          counts[tool.category] += 1;
+          return counts;
+        },
+        { chat: 0, create: 0, code: 0, explore: 0 }
+      ),
+    [orderedTools]
+  );
   const searchResults = useMemo(
-    () => (deferredQuery.trim() ? searchBuiltInTools(deferredQuery, orderedTools) : []),
+    () => (deferredQuery.trim() ? searchTools(orderedTools, deferredQuery) : []),
     [deferredQuery, orderedTools]
   );
   const visibleTools = useMemo(
@@ -239,9 +217,9 @@ export default function App() {
   const recentTools = useMemo(
     () =>
       (state?.recent ?? [])
-        .map(({ toolId }) => getBuiltInTool(toolId))
+        .map(({ toolId }) => orderedTools.find((tool) => tool.id === toolId) ?? null)
         .filter((tool): tool is ToolDefinition => tool !== null),
-    [state?.recent]
+    [orderedTools, state?.recent]
   );
   const activeResultIndex = Math.min(selectedIndex, Math.max(0, searchResults.length - 1));
   const connectedSnapshots = Object.values(state?.subscriptions ?? {}).filter(
@@ -348,17 +326,6 @@ export default function App() {
     [reorderTool, t.movedDown, t.movedUp, visibleTools]
   );
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await chrome.runtime.sendMessage({ type: "refresh" });
-      await loadRuntimeState();
-      setNotice(t.refreshed);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadRuntimeState, t.refreshed]);
-
   const handleConnect = useCallback(
     async (providerId: string) => {
       setPendingProviderId(providerId);
@@ -434,7 +401,7 @@ export default function App() {
     const next = themes[(themes.indexOf(theme) + 1) % themes.length];
     setTheme(next);
     applyTheme(next);
-    void chrome.storage.local.set({ theme: next });
+    void preferencesStore.update({ theme: next });
   };
 
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -447,12 +414,6 @@ export default function App() {
     event.preventDefault();
     setCategory(categories[nextIndex]);
     categoryRefs.current[nextIndex]?.focus();
-  };
-
-  const cycleLocale = () => {
-    const next = locales[(locales.indexOf(locale) + 1) % locales.length];
-    setLocale(next);
-    void chrome.storage.local.set({ locale: next });
   };
 
   const toolDetail = (tool: ToolDefinition) =>
@@ -479,12 +440,15 @@ export default function App() {
             <div className="header-actions">
               <button
                 type="button"
-                className="icon-button language-button"
-                aria-label={t.switchLanguage}
-                title={t.switchLanguage}
-                onClick={cycleLocale}
+                className="icon-button settings-button"
+                aria-label={t.settings}
+                title={t.settings}
+                onClick={() => void chrome.runtime.openOptionsPage()}
               >
-                {locale.toUpperCase()}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H3v-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V3h4v.08A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9 1.7 1.7 0 0 0 21 10v4a1.7 1.7 0 0 0-1.6 1Z" />
+                </svg>
               </button>
               <button
                 type="button"
@@ -509,18 +473,6 @@ export default function App() {
                   </svg>
                 )}
               </button>
-              <button
-                type="button"
-                className={`icon-button refresh-button ${refreshing ? "is-refreshing" : ""}`}
-                aria-label={t.refresh}
-                title={t.refresh}
-                disabled={refreshing}
-                onClick={() => void handleRefresh()}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7" />
-                </svg>
-              </button>
             </div>
           </header>
 
@@ -537,7 +489,7 @@ export default function App() {
                   key={view}
                   type="button"
                   role="tab"
-                  aria-label={view === "tools" ? `${label} (${tools.length})` : label}
+                  aria-label={view === "tools" ? `${label} (${orderedTools.length})` : label}
                   aria-selected={selected}
                   aria-controls={`${view}-view`}
                   tabIndex={selected ? 0 : -1}
@@ -557,7 +509,7 @@ export default function App() {
                   <span>{label}</span>
                   {view === "tools" ? (
                     <span className="tab-count" aria-hidden="true">
-                      {tools.length}
+                      {orderedTools.length}
                     </span>
                   ) : null}
                 </button>
@@ -711,7 +663,7 @@ export default function App() {
                   <div className="category-tabs" role="tablist" aria-label={t.categories}>
                     {categories.map((item, index) => {
                       const label = item === "all" ? t.all : categoryLabel(item, locale);
-                      const count = item === "all" ? tools.length : categoryCounts[item];
+                      const count = item === "all" ? orderedTools.length : categoryCounts[item];
                       return (
                         <button
                           ref={(element) => {

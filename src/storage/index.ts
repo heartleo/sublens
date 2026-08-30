@@ -1,4 +1,4 @@
-import { getBuiltInTool } from "../tools";
+import { getBuiltInTool, type ToolDefinition } from "../tools";
 import type { SubscriptionInfo } from "../providers/base";
 import type { ExtensionState, SubscriptionSnapshot } from "./types";
 
@@ -23,6 +23,13 @@ export interface ExtensionStorage {
   setFavorite(toolId: string, favorite: boolean): Promise<ExtensionState>;
   setToolOrder(toolIds: readonly string[]): Promise<ExtensionState>;
   setSubscriptionOrder(providerIds: readonly string[]): Promise<ExtensionState>;
+  saveCustomTool(tool: ToolDefinition): Promise<ExtensionState>;
+  removeCustomTool(toolId: string): Promise<ExtensionState>;
+  setBuiltInVisible(toolId: string, visible: boolean): Promise<ExtensionState>;
+  clearActivity(): Promise<ExtensionState>;
+  resetToolOrder(): Promise<ExtensionState>;
+  resetFavorites(): Promise<ExtensionState>;
+  resetLauncher(): Promise<ExtensionState>;
 }
 
 function linkedToolIdForLegacySubscription(info: LegacySubscriptionInfo): string | null {
@@ -43,29 +50,56 @@ function migrateSubscription(info: LegacySubscriptionInfo): SubscriptionSnapshot
 
 function createDefaultState(): ExtensionState {
   return {
-    version: 2,
+    version: 3,
     favorites: [...DEFAULT_FAVORITES],
     recent: [],
     usage: {},
     customTools: [],
     toolOrder: [],
+    hiddenBuiltInTools: [],
     subscriptions: {},
     subscriptionOrder: [],
   };
 }
 
 function isExtensionState(value: unknown): value is ExtensionState {
+  return typeof value === "object" && value !== null && "version" in value && value.version === 3;
+}
+
+function isVersion2State(value: unknown): value is Omit<
+  ExtensionState,
+  "version" | "hiddenBuiltInTools"
+> & {
+  version: 2;
+  toolOrder?: string[];
+} {
   return typeof value === "object" && value !== null && "version" in value && value.version === 2;
 }
 
 function normalizeState(state: ExtensionState): ExtensionState {
-  const toolOrder = (state as Partial<ExtensionState>).toolOrder;
   return {
     ...state,
-    toolOrder: Array.isArray(toolOrder)
-      ? toolOrder.filter((toolId): toolId is string => typeof toolId === "string")
+    toolOrder: Array.isArray(state.toolOrder)
+      ? state.toolOrder.filter((toolId): toolId is string => typeof toolId === "string")
+      : [],
+    hiddenBuiltInTools: Array.isArray(state.hiddenBuiltInTools)
+      ? state.hiddenBuiltInTools.filter((toolId): toolId is string => typeof toolId === "string")
       : [],
   };
+}
+
+function migrateVersion2State(
+  state: Omit<ExtensionState, "version" | "hiddenBuiltInTools"> & {
+    version: 2;
+    toolOrder?: string[];
+  }
+): ExtensionState {
+  return normalizeState({
+    ...state,
+    version: 3,
+    toolOrder: state.toolOrder ?? [],
+    hiddenBuiltInTools: [],
+  });
 }
 
 export function createExtensionStorage(adapter: StorageAdapter): ExtensionStorage {
@@ -74,10 +108,11 @@ export function createExtensionStorage(adapter: StorageAdapter): ExtensionStorag
   async function load(): Promise<ExtensionState> {
     const stored = await adapter.read([STATE_KEY, LEGACY_SUBSCRIPTIONS_KEY, LEGACY_ORDER_KEY]);
     if (isExtensionState(stored[STATE_KEY])) {
-      const state = normalizeState(stored[STATE_KEY]);
-      if (!Array.isArray((stored[STATE_KEY] as Partial<ExtensionState>).toolOrder)) {
-        await adapter.write({ [STATE_KEY]: state });
-      }
+      return normalizeState(stored[STATE_KEY]);
+    }
+    if (isVersion2State(stored[STATE_KEY])) {
+      const state = migrateVersion2State(stored[STATE_KEY]);
+      await adapter.write({ [STATE_KEY]: state });
       return state;
     }
 
@@ -158,6 +193,53 @@ export function createExtensionStorage(adapter: StorageAdapter): ExtensionStorag
     },
     async setSubscriptionOrder(providerIds) {
       return mutate((state) => ({ ...state, subscriptionOrder: [...providerIds] }));
+    },
+    async saveCustomTool(tool) {
+      return mutate((state) => ({
+        ...state,
+        customTools: [tool, ...state.customTools.filter((candidate) => candidate.id !== tool.id)],
+      }));
+    },
+    async removeCustomTool(toolId) {
+      return mutate((state) => {
+        const usage = { ...state.usage };
+        delete usage[toolId];
+        return {
+          ...state,
+          favorites: state.favorites.filter((id) => id !== toolId),
+          recent: state.recent.filter((entry) => entry.toolId !== toolId),
+          usage,
+          customTools: state.customTools.filter((tool) => tool.id !== toolId),
+          toolOrder: state.toolOrder.filter((id) => id !== toolId),
+        };
+      });
+    },
+    async setBuiltInVisible(toolId, visible) {
+      return mutate((state) => {
+        const hiddenBuiltInTools = state.hiddenBuiltInTools.filter((id) => id !== toolId);
+        if (!visible) hiddenBuiltInTools.push(toolId);
+        return { ...state, hiddenBuiltInTools };
+      });
+    },
+    async clearActivity() {
+      return mutate((state) => ({ ...state, recent: [], usage: {} }));
+    },
+    async resetToolOrder() {
+      return mutate((state) => ({ ...state, toolOrder: [] }));
+    },
+    async resetFavorites() {
+      return mutate((state) => ({ ...state, favorites: [...DEFAULT_FAVORITES] }));
+    },
+    async resetLauncher() {
+      return mutate((state) => ({
+        ...state,
+        favorites: [...DEFAULT_FAVORITES],
+        recent: [],
+        usage: {},
+        customTools: [],
+        toolOrder: [],
+        hiddenBuiltInTools: [],
+      }));
     },
   };
 }

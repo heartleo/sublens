@@ -1,4 +1,4 @@
-import type { SubscriptionInfo, SubscriptionProvider } from "./base";
+import { FREE_PLAN, type SubscriptionInfo, type SubscriptionProvider } from "./base";
 
 const BILLING_URL = "https://github.com/settings/billing";
 
@@ -183,9 +183,9 @@ export const copilotProvider: SubscriptionProvider = {
       const nextDate = payload.nextPaymentTileData?.nextPaymentDate;
 
       // Determine plan name and price from billing data.
-      const plan = isFreeTier ? "Free" : sub?.name || "Unknown";
+      const plan = isFreeTier ? FREE_PLAN.plan : sub?.name || "Unknown";
       const price = isFreeTier
-        ? "Free"
+        ? FREE_PLAN.price
         : sub?.price && sub?.billingCycle
           ? `$${Number(sub.price).toFixed(2)}/${sub.billingCycle === "month" ? "mo" : "yr"}`
           : "";

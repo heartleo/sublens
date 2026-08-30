@@ -1,4 +1,4 @@
-import type { SubscriptionInfo, SubscriptionProvider } from "./base";
+import { FREE_PLAN, type SubscriptionInfo, type SubscriptionProvider } from "./base";
 
 const API_BASE = "https://cursor.com";
 
@@ -84,7 +84,9 @@ export const cursorProvider: SubscriptionProvider = {
         // The usage summary already proves authentication and carries the current plan.
       }
 
-      const plan = (stripe?.membershipType ?? usage.membershipType ?? "hobby").toUpperCase();
+      const rawPlan = (stripe?.membershipType ?? usage.membershipType ?? "hobby").toUpperCase();
+      const isFreeTier = rawPlan === "HOBBY" || rawPlan === "FREE";
+      const plan = isFreeTier ? FREE_PLAN.plan : rawPlan;
       const cycle = stripe?.isYearlyPlan ? "year" : "month";
 
       const priceMap: Record<string, Record<string, string>> = {
@@ -92,7 +94,7 @@ export const cursorProvider: SubscriptionProvider = {
         TEAM: { month: "$40/user/mo", year: "$384/user/yr" },
         STANDARD: { month: "$40/user/mo", year: "$384/user/yr" },
       };
-      const price = priceMap[plan]?.[cycle] || "";
+      const price = isFreeTier ? FREE_PLAN.price : priceMap[plan]?.[cycle] || "";
 
       const u = usage.individualUsage?.plan;
       const billingEnd = usage.billingCycleEnd;

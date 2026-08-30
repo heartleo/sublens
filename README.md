@@ -18,15 +18,22 @@
 
 ## Features
 
-- **Launcher-first popup** — open 14 built-in AI tools from a compact catalog
-- **Fast search** — match names, aliases, categories, subcategories, and tags
-- **Keyboard navigation** — `Ctrl/Cmd + K`, arrow keys, Enter, and Escape
-- **Favorites and recents** — keep frequent tools one click away with local persistence
-- **Optional subscription connections** — connect ChatGPT, Claude, GitHub Copilot, or Cursor individually
-- **Subscription summary** — view connected plans, monthly spend, and paid-plan badge count
-- **Dark / Light / System theme** — auto-follows OS preference
-- **Multi-language** — English and Simplified Chinese, with locale-aware date and price formatting
-- **Privacy-first** — provider access is requested on demand; data stays in local extension storage
+- Home keeps favorites, recent launches, and subscription details together. Tools contains the
+  complete launcher catalog.
+- The catalog starts with 14 AI tools. You can add more websites without losing deep links.
+- Search matches tool names, aliases, categories, subcategories, and tags.
+- `Ctrl/Cmd + K`, arrow keys, Enter, and Escape cover the main keyboard workflow.
+- Favorites and recent launches are saved locally.
+- Drag tools to reorder them. Keyboard move controls provide the same function.
+- Tool icons can use packaged artwork, a site favicon, an uploaded image, or a centered letter.
+- Built-in tools can be hidden and restored later.
+- ChatGPT, Claude, GitHub Copilot, and Cursor connections are optional and independent.
+- The subscription summary shows connected plans, estimated monthly spend, and the number of paid
+  plans.
+- Choose a light or dark theme, or follow the operating system.
+- The interface supports English and Simplified Chinese, including localized dates and prices.
+- SubLens requests provider and favicon access only when a feature needs it. Launcher data and
+  uploaded icons stay in local extension storage.
 
 ## Install
 
@@ -34,33 +41,58 @@
 
 > Coming soon
 
-### Download from Releases
+### Download from releases
 
 1. Go to [Releases](https://github.com/heartleo/sublens/releases) and download the latest `sublens-vX.X.X.zip`
 2. Unzip the file
 3. Open `chrome://extensions` → enable **Developer mode**
 4. Click **Load unpacked** → select the unzipped `dist/` folder
 
-### Manual Install (Developer Mode)
+### Manual install
 
 1. Clone and build:
 
 ```bash
 git clone https://github.com/heartleo/sublens.git
 cd sublens
-npm install
+npm ci
 npm run build
 ```
 
 2. Open `chrome://extensions` → enable **Developer mode**
 3. Click **Load unpacked** → select the `dist/` folder
 
-## Built-in Tools
+## Built-in tools
 
 ChatGPT, Claude, Gemini, DeepSeek, Grok, Midjourney, Runway, Kling AI, Cursor, GitHub
 Copilot, Codex, Hugging Face, OpenRouter, and NotebookLM.
 
-## Subscription Providers
+## Custom AI tools
+
+Open **Settings → Tools → Add tool** to add any HTTPS website or local AI tool. SubLens keeps the
+full URL, so links to a specific workspace or app route continue to work.
+
+Each custom tool supports three icon sources:
+
+- Automatic uses matching packaged artwork when available. Otherwise, SubLens can request access
+  to the website favicon.
+- Upload accepts PNG, JPEG, and WebP images up to 5 MB. Image processing happens locally.
+- Letter creates a large, centered initial from the tool name.
+
+The same page lets you edit or delete custom tools and hide individual built-in tools. Tool order
+is managed directly from the **Tools** tab in the popup by dragging the visible reorder handle or
+using its keyboard move controls.
+
+## Settings
+
+| Section       | Controls                                                             |
+| ------------- | -------------------------------------------------------------------- |
+| General       | Theme, language, and the default popup page                          |
+| Tools         | Custom tools and built-in tool visibility                            |
+| Subscriptions | Provider connections, refresh, and disconnect actions                |
+| Data & About  | Recent activity, ordering, favorites, launcher data, and preferences |
+
+## Subscription providers
 
 | Provider                                                         | Price | Billing Cycle |
 | ---------------------------------------------------------------- | ----- | ------------- |
@@ -69,28 +101,32 @@ Copilot, Codex, Hugging Face, OpenRouter, and NotebookLM.
 | <img src="public/logos/copilot.svg" width="16" /> GitHub Copilot | Yes   | Yes           |
 | <img src="public/logos/cursor.svg" width="16" /> Cursor          | Yes   | Yes           |
 
-## Usage Tips
+## Usage tips
 
-- **Click any tool** to open it in a new tab
-- **Press `Ctrl/Cmd + K`** to focus search, then use arrow keys and Enter to launch
-- **Click the star** to add or remove a favorite
-- **Open Subscriptions** to connect only the providers you want to track
-- **Click the SubLens logo** to refresh connected subscriptions
-- **Click the language button** (EN/ZH) to switch between English and Chinese
+- Click a tool to open it in a new tab.
+- Switch to Tools to browse the catalog, filter by category, or search.
+- Press `Ctrl/Cmd + K` from either page to open Tools and focus search. Use the arrow keys and Enter
+  to launch the selected result.
+- Click the star on a tool to add or remove a favorite.
+- Open Subscriptions and connect only the providers you want to track.
+- Connected subscription data refreshes automatically every 15 minutes.
+- Open settings to manage tools, language, the default page, connections, and stored launcher data.
 
 ## Development
 
 ```bash
-npm install          # install dependencies
+npm ci               # install the locked dependency set
 npm run dev          # start dev server
 npm run build        # type-check + production build
 npm run build:fast   # production build (skip type-check)
+npm run typecheck    # strict TypeScript checks
 npm run lint         # ESLint
 npm test             # Vitest unit tests
-npm run format       # Prettier
+npm run format       # format source files with Prettier
+npm run format:check # verify Prettier formatting
 ```
 
-### Adding a New Provider
+### Adding a new provider
 
 1. Copy `src/providers/_template.ts` to `src/providers/<provider-id>.ts`
 2. Replace the provider metadata, response type guard, endpoint, and response mapping
@@ -104,7 +140,7 @@ Use `createSubscriptionInfo()` from `src/providers/base.ts` for complete default
 details and response types inside the provider adapter so callers only depend on
 `SubscriptionProvider`.
 
-### Adding a New Language
+### Adding a new language
 
 1. Create `src/i18n/locales/<code>.ts` (use `en.ts` as template)
 2. Import and register in `src/i18n/index.ts`
@@ -113,4 +149,4 @@ details and response types inside the provider adapter so callers only depend on
 ## Feedback
 
 - If you find SubLens useful, please give it a ⭐
-- For bugs or feature requests, feel free to [open an issue](https://github.com/heartleo/sublens/issues).
+- Found a bug or have a feature request? [Open an issue](https://github.com/heartleo/sublens/issues).

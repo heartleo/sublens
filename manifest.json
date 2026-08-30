@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "SubLens",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Launch AI tools fast and track connected subscriptions locally.",
   "permissions": ["storage", "alarms"],
+  "optional_permissions": ["favicon"],
   "optional_host_permissions": [
     "https://cursor.com/*",
     "https://github.com/*",
@@ -12,6 +13,10 @@
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
   "action": {
     "default_popup": "popup.html",

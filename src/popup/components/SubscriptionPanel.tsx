@@ -2,7 +2,7 @@ import type { SubscriptionProvider } from "../../providers";
 import { isFreePlan, type SubscriptionInfo } from "../../providers/base";
 import type { LocaleMessages } from "../../i18n/locales/en";
 import { getBuiltInTool } from "../../tools";
-import { ToolLogo } from "./ToolLogo";
+import { ToolLogo } from "../../components/ToolLogo";
 
 interface SubscriptionPanelProps {
   open: boolean;

@@ -43,9 +43,10 @@ describe("Extension Storage", () => {
     const state = await storage.load();
 
     expect(state).toMatchObject({
-      version: 2,
+      version: 3,
       favorites: ["chatgpt", "claude", "cursor"],
       toolOrder: [],
+      hiddenBuiltInTools: [],
       subscriptionOrder: ["googleone", "chatgpt"],
       subscriptions: {
         googleone: {
@@ -80,7 +81,7 @@ describe("Extension Storage", () => {
     expect(state.favorites).toEqual(["chatgpt", "cursor", "gemini"]);
   });
 
-  it("adds an empty Tool Order to existing version 2 state", async () => {
+  it("migrates version 2 state with new Tool visibility defaults", async () => {
     const storage = createExtensionStorage(
       createMemoryStorage({
         sublens_state: {
@@ -95,7 +96,11 @@ describe("Extension Storage", () => {
       })
     );
 
-    expect((await storage.load()).toolOrder).toEqual([]);
+    expect(await storage.load()).toMatchObject({
+      version: 3,
+      toolOrder: [],
+      hiddenBuiltInTools: [],
+    });
   });
 
   it("persists the custom Tool Order", async () => {
@@ -145,5 +150,109 @@ describe("Extension Storage", () => {
     ]);
 
     expect(Object.keys((await storage.load()).subscriptions)).toEqual(["chatgpt", "claude"]);
+  });
+
+  it("saves and updates a Custom Tool by its stable identity", async () => {
+    const storage = createExtensionStorage(createMemoryStorage({}));
+    const tool = {
+      id: "custom-perplexity",
+      name: "Perplexity",
+      url: "https://www.perplexity.ai/",
+      icon: "",
+      iconSource: "favicon" as const,
+      fallback: "P",
+      category: "chat" as const,
+      aliases: [],
+      tags: [],
+    };
+
+    await storage.saveCustomTool(tool);
+    const state = await storage.saveCustomTool({ ...tool, name: "Perplexity AI" });
+
+    expect(state.customTools).toEqual([{ ...tool, name: "Perplexity AI" }]);
+  });
+
+  it("removes a Custom Tool and all launcher references to it", async () => {
+    const customTool = {
+      id: "custom-perplexity",
+      name: "Perplexity",
+      url: "https://www.perplexity.ai/",
+      icon: "",
+      iconSource: "favicon" as const,
+      fallback: "P",
+      category: "chat" as const,
+      aliases: [],
+      tags: [],
+    };
+    const storage = createExtensionStorage(
+      createMemoryStorage({
+        sublens_state: {
+          version: 3,
+          favorites: ["chatgpt", customTool.id],
+          recent: [{ toolId: customTool.id, lastOpened: "2026-08-30T10:00:00.000Z" }],
+          usage: {
+            [customTool.id]: { launches: 3, lastOpened: "2026-08-30T10:00:00.000Z" },
+          },
+          customTools: [customTool],
+          toolOrder: [customTool.id, "chatgpt"],
+          hiddenBuiltInTools: [],
+          subscriptions: {},
+          subscriptionOrder: [],
+        },
+      })
+    );
+
+    const state = await storage.removeCustomTool(customTool.id);
+
+    expect(state.customTools).toEqual([]);
+    expect(state.favorites).toEqual(["chatgpt"]);
+    expect(state.recent).toEqual([]);
+    expect(state.usage).toEqual({});
+    expect(state.toolOrder).toEqual(["chatgpt"]);
+  });
+
+  it("hides and restores a Built-in Tool without duplicating visibility state", async () => {
+    const storage = createExtensionStorage(createMemoryStorage({}));
+
+    await storage.setBuiltInVisible("gemini", false);
+    await storage.setBuiltInVisible("gemini", false);
+    expect((await storage.load()).hiddenBuiltInTools).toEqual(["gemini"]);
+
+    expect((await storage.setBuiltInVisible("gemini", true)).hiddenBuiltInTools).toEqual([]);
+  });
+
+  it("resets launcher data without removing Subscription Snapshots", async () => {
+    const storage = createExtensionStorage(createMemoryStorage({}));
+    await storage.setFavorite("gemini", true);
+    await storage.setBuiltInVisible("gemini", false);
+    await storage.saveSubscription({
+      providerId: "chatgpt",
+      linkedToolId: "chatgpt",
+      name: "ChatGPT",
+      plan: "Plus",
+      price: "$20/mo",
+      originalPrice: null,
+      active: true,
+      nextBillingDate: null,
+      daysUntilBilling: null,
+      usagePercent: null,
+      usageLabel: null,
+      error: null,
+      loginUrl: null,
+      homeUrl: null,
+      lastUpdated: "2026-08-30T10:00:00.000Z",
+    });
+
+    const state = await storage.resetLauncher();
+
+    expect(state).toMatchObject({
+      favorites: ["chatgpt", "claude", "cursor"],
+      recent: [],
+      usage: {},
+      customTools: [],
+      toolOrder: [],
+      hiddenBuiltInTools: [],
+    });
+    expect(state.subscriptions.chatgpt.plan).toBe("Plus");
   });
 });

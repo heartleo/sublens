@@ -32,6 +32,9 @@ export interface SubscriptionInfo {
   lastUpdated: string;
 }
 
+/** Canonical fields used by every provider for a free subscription tier. */
+export const FREE_PLAN = { plan: "Free", price: "" } as const;
+
 /** Fields a provider can override when creating a subscription result. */
 export type SubscriptionInfoOverrides = Partial<
   Omit<SubscriptionInfo, "providerId" | "linkedToolId" | "name">

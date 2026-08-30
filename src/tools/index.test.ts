@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { getBuiltInTool, listBuiltInTools, searchBuiltInTools } from "./index";
+import {
+  createCustomTool,
+  getBuiltInTool,
+  listBuiltInTools,
+  listTools,
+  normalizeToolUrl,
+  orderTools,
+  searchBuiltInTools,
+  suggestToolFromUrl,
+} from "./index";
 
 describe("Tool Catalog", () => {
   it("exposes the 14 curated Built-in Tools with stable unique IDs", () => {
@@ -69,6 +78,53 @@ describe("Tool Search", () => {
       "copilot",
       "chatgpt",
       "deepseek",
+    ]);
+  });
+});
+
+describe("Custom Tool Catalog", () => {
+  it("normalizes safe web destinations and rejects unsafe schemes", () => {
+    expect(normalizeToolUrl("perplexity.ai")).toBe("https://perplexity.ai/");
+    expect(normalizeToolUrl("http://localhost:3000/chat#draft")).toBe("http://localhost:3000/chat");
+    expect(normalizeToolUrl("http://example.com/")).toBeNull();
+    expect(normalizeToolUrl("javascript:alert(1)")).toBeNull();
+    expect(normalizeToolUrl("https://user:secret@example.com/")).toBeNull();
+  });
+
+  it("reuses packaged official artwork for a recognized Tool origin", () => {
+    expect(suggestToolFromUrl("https://chatgpt.com/gpts")).toMatchObject({
+      name: "ChatGPT",
+      category: "chat",
+      icon: "/logos/chatgpt.svg",
+      iconSource: "packaged",
+    });
+  });
+
+  it("suggests a readable name and browser favicon for an unknown Tool", () => {
+    expect(suggestToolFromUrl("https://chat.mistral.ai/chat")).toMatchObject({
+      name: "Mistral",
+      host: "chat.mistral.ai",
+      category: "explore",
+      icon: "",
+      iconSource: "favicon",
+    });
+  });
+
+  it("combines visible Built-in Tools with Custom Tools and applies saved order", () => {
+    const customTool = createCustomTool("custom-perplexity", {
+      name: "Perplexity",
+      url: "https://www.perplexity.ai/",
+      category: "chat",
+      icon: "",
+      iconSource: "favicon",
+    });
+
+    const visibleTools = listTools([customTool], ["gemini"]);
+    expect(visibleTools.some((tool) => tool.id === "gemini")).toBe(false);
+    expect(visibleTools[visibleTools.length - 1]?.id).toBe("custom-perplexity");
+    expect(orderTools(visibleTools, ["custom-perplexity", "chatgpt"]).slice(0, 2)).toEqual([
+      customTool,
+      getBuiltInTool("chatgpt"),
     ]);
   });
 });

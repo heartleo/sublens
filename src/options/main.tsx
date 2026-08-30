@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { applyTheme } from "../appearance";
 import { preferencesStore } from "../preferences";
 import App from "./App";
+import "./styles.css";
 
 async function start(): Promise<void> {
   const preferences = await preferencesStore.load();

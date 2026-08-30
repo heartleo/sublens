@@ -14,12 +14,13 @@ export interface UsageRecord {
 export type SubscriptionSnapshot = SubscriptionInfo;
 
 export interface ExtensionState {
-  version: 2;
+  version: 3;
   favorites: string[];
   recent: RecentLaunch[];
   usage: Record<string, UsageRecord>;
   customTools: ToolDefinition[];
   toolOrder: string[];
+  hiddenBuiltInTools: string[];
   subscriptions: Record<string, SubscriptionSnapshot>;
   subscriptionOrder: string[];
 }
