@@ -1,56 +1,58 @@
 <h1 align="center">SubLens</h1>
 
 <p align="center">
-  Launch AI tools fast, then keep connected subscriptions in view.
+  Launch every AI tool from one popup — and see what you're paying for.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/release/heartleo/sublens?logo=github" alt="GitHub Release" />
-  <img src="https://img.shields.io/badge/chrome-%3E%3D88-brightgreen?logo=googlechrome&logoColor=white" alt="Chrome 88+" />
+  <a href="https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh"><img src="https://img.shields.io/chrome-web-store/v/ckhnoellkkppjdcdkcombflmkehabdnh?logo=googlechrome&logoColor=white&label=chrome%20web%20store" alt="Chrome Web Store" /></a>
+  <a href="https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh"><img src="https://img.shields.io/chrome-web-store/users/ckhnoellkkppjdcdkcombflmkehabdnh?label=users" alt="Users" /></a>
+  <a href="https://github.com/heartleo/sublens/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/heartleo/sublens/ci.yml?branch=main&label=ci" alt="CI" /></a>
   <img src="https://img.shields.io/badge/manifest-v3-blue" alt="Manifest V3" />
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshot_dark.png" width="380" alt="SubLens Dark Mode" />
-  <img src="docs/screenshot_light.png" width="380" alt="SubLens Light Mode" />
+  <a href="https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh"><b>Install from the Chrome Web Store</b></a>
+  ·
+  <a href="https://heartleo.github.io/sublens/">Website</a>
+  ·
+  <a href="https://heartleo.github.io/sublens/privacy.html">Privacy</a>
 </p>
 
-## Features
+<p align="center">
+  <img src="docs/hero.png" width="820" alt="SubLens popup: launcher home, tool search, and light mode" />
+</p>
 
-- Home keeps favorites, recent launches, and subscription details together. Tools contains the
-  complete launcher catalog.
-- The catalog starts with 14 AI tools. You can add more websites without losing deep links.
-- Search matches tool names, aliases, categories, subcategories, and tags.
-- `Ctrl/Cmd + K`, arrow keys, Enter, and Escape cover the main keyboard workflow.
-- Favorites and recent launches are saved locally.
-- Drag tools to reorder them. Keyboard move controls provide the same function.
-- Tool icons can use packaged artwork, a site favicon, an uploaded image, or a centered letter.
-- Built-in tools can be hidden and restored later.
-- ChatGPT, Claude, GitHub Copilot, and Cursor connections are optional and independent.
-- The subscription summary shows connected plans, estimated monthly spend, and the number of paid
-  plans.
-- Choose a light or dark theme, or follow the operating system.
-- The interface supports English and Simplified Chinese, including localized dates and prices.
-- SubLens requests provider and favicon access only when a feature needs it. Launcher data and
-  uploaded icons stay in local extension storage.
+## What it does
+
+You probably have five AI tools open in five tabs. SubLens puts them behind one keyboard shortcut,
+and — only if you ask it to — shows what each subscription costs and when it renews.
+
+- **Launch anything fast.** 14 built-in AI tools, searchable by name, alias, category, or tag.
+- **Add your own.** Any HTTPS URL becomes a tool, deep links included, with an icon you pick.
+- **Keyboard first.** `Ctrl/Cmd + K` to search, arrow keys to move, Enter to launch, Escape to clear.
+- **Favorites and recents.** The tools you actually use, at the top.
+- **Optional subscription tracking.** Connect ChatGPT, Claude, GitHub Copilot, or Cursor to see plan,
+  price, next billing date, and your monthly total.
+- **Local only.** Everything lives in `chrome.storage.local`. No servers, no analytics, no accounts.
 
 ## Install
 
-### Chrome Web Store
+**[Chrome Web Store](https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh)** — one click, no account required.
 
-[Add SubLens to Chrome](https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh)
+<details>
+<summary>Install from a release build</summary>
 
-### Download from releases
-
-1. Go to [Releases](https://github.com/heartleo/sublens/releases) and download the latest `sublens-vX.X.X.zip`
-2. Unzip the file
+1. Download the latest `sublens-vX.X.X.zip` from [Releases](https://github.com/heartleo/sublens/releases)
+2. Unzip it
 3. Open `chrome://extensions` → enable **Developer mode**
-4. Click **Load unpacked** → select the unzipped `dist/` folder
+4. **Load unpacked** → select the unzipped `dist/` folder
 
-### Manual install
+</details>
 
-1. Clone and build:
+<details>
+<summary>Build from source</summary>
 
 ```bash
 git clone https://github.com/heartleo/sublens.git
@@ -59,94 +61,84 @@ npm ci
 npm run build
 ```
 
-2. Open `chrome://extensions` → enable **Developer mode**
-3. Click **Load unpacked** → select the `dist/` folder
+Then load `dist/` through `chrome://extensions` with **Developer mode** enabled.
+
+</details>
+
+## Screenshots
+
+|                     Launcher                      |                       Subscriptions                       |
+| :-----------------------------------------------: | :-------------------------------------------------------: |
+| ![Launcher](docs/screenshots/store-1-launcher.png) | ![Subscriptions](docs/screenshots/store-2-subscriptions.png) |
+
+|                    Search                     |                       Custom tools                        |
+| :-------------------------------------------: | :-------------------------------------------------------: |
+| ![Search](docs/screenshots/store-3-search.png) |     ![Custom tools](docs/screenshots/store-4-custom.png)     |
 
 ## Built-in tools
 
-ChatGPT, Claude, Gemini, DeepSeek, Grok, Midjourney, Runway, Kling AI, Cursor, GitHub
-Copilot, Codex, Hugging Face, OpenRouter, and NotebookLM.
+ChatGPT, Claude, Gemini, DeepSeek, Grok, Midjourney, Runway, Kling AI, Cursor, GitHub Copilot,
+Codex, Hugging Face, OpenRouter, and NotebookLM.
 
-## Custom AI tools
-
-Open **Settings → Tools → Add tool** to add any HTTPS website or local AI tool. SubLens keeps the
-full URL, so links to a specific workspace or app route continue to work.
-
-Each custom tool supports three icon sources:
-
-- Automatic uses matching packaged artwork when available. Otherwise, SubLens can request access
-  to the website favicon.
-- Upload accepts PNG, JPEG, and WebP images up to 5 MB. Image processing happens locally.
-- Letter creates a large, centered initial from the tool name.
-
-The same page lets you edit or delete custom tools and hide individual built-in tools. Tool order
-is managed directly from the **Tools** tab in the popup by dragging the visible reorder handle or
-using its keyboard move controls.
-
-## Settings
-
-| Section       | Controls                                                             |
-| ------------- | -------------------------------------------------------------------- |
-| General       | Theme, language, and the default popup page                          |
-| Tools         | Custom tools and built-in tool visibility                            |
-| Subscriptions | Provider connections, refresh, and disconnect actions                |
-| Data & About  | Recent activity, ordering, favorites, launcher data, and preferences |
+Anything missing is one **Settings → Tools → Add tool** away.
 
 ## Subscription providers
 
-| Provider                                                         | Price | Billing Cycle |
-| ---------------------------------------------------------------- | ----- | ------------- |
-| <img src="public/logos/chatgpt.svg" width="16" /> ChatGPT        | Yes   | Yes           |
-| <img src="public/logos/claude.svg" width="16" /> Claude          | Yes   | Yes           |
-| <img src="public/logos/copilot.svg" width="16" /> GitHub Copilot | Yes   | Yes           |
-| <img src="public/logos/cursor.svg" width="16" /> Cursor          | Yes   | Yes           |
+| Provider                                                         | Plan & price | Billing date |
+| ---------------------------------------------------------------- | ------------ | ------------ |
+| <img src="public/logos/chatgpt.svg" width="16" /> ChatGPT        | ✓            | ✓            |
+| <img src="public/logos/claude.svg" width="16" /> Claude          | ✓            | ✓            |
+| <img src="public/logos/copilot.svg" width="16" /> GitHub Copilot | ✓            | ✓            |
+| <img src="public/logos/cursor.svg" width="16" /> Cursor          | ✓            | ✓            |
 
-## Usage tips
+Each connection is separate and optional. SubLens requests access to a provider's site only when you
+click **Connect**, uses the session you're already signed into, and never reads or stores cookie
+values. Disconnecting revokes the host permission.
 
-- Click a tool to open it in a new tab.
-- Switch to Tools to browse the catalog, filter by category, or search.
-- Press `Ctrl/Cmd + K` from either page to open Tools and focus search. Use the arrow keys and Enter
-  to launch the selected result.
-- Click the star on a tool to add or remove a favorite.
-- Open Subscriptions and connect only the providers you want to track.
-- Connected subscription data refreshes automatically every 15 minutes.
-- Open settings to manage tools, language, the default page, connections, and stored launcher data.
+## Privacy
+
+SubLens has no backend. Favorites, recents, custom tools, preferences, and subscription snapshots are
+stored with `chrome.storage.local` on your machine, and requests go straight from your browser to the
+provider you connected. Removing the extension deletes everything.
+
+Full policy: [heartleo.github.io/sublens/privacy.html](https://heartleo.github.io/sublens/privacy.html)
 
 ## Development
 
 ```bash
-npm ci               # install the locked dependency set
-npm run dev          # start dev server
-npm run build        # type-check + production build
-npm run build:fast   # production build (skip type-check)
-npm run typecheck    # strict TypeScript checks
+npm ci               # install the locked dependency set (CI uses Node 20)
+npm run dev          # Vite dev server
+npm run build        # type-check + production build into dist/
+npm run typecheck    # strict TypeScript, no emit
 npm run lint         # ESLint
-npm test             # Vitest unit tests
-npm run format       # format source files with Prettier
-npm run format:check # verify Prettier formatting
+npm test             # Vitest
+npm run format       # Prettier
 ```
 
-### Adding a new provider
+Architecture, conventions, and the provider checklist live in [AGENTS.md](AGENTS.md); domain
+vocabulary lives in [CONTEXT.md](CONTEXT.md).
 
-1. Copy `src/providers/_template.ts` to `src/providers/<provider-id>.ts`
-2. Replace the provider metadata, response type guard, endpoint, and response mapping
-3. Return failures through `SubscriptionInfo.error`; do not throw from `fetch()`
-4. Register the provider in `src/providers/index.ts`
-5. Add the required host pattern to `optional_host_permissions` in `manifest.json`
-6. Add an SVG logo to `public/logos/` and update the privacy documentation when data access changes
-7. Run `npm run lint`, `npm run typecheck`, and `npm run build`
+### Adding a provider
 
-Use `createSubscriptionInfo()` from `src/providers/base.ts` for complete defaults. Keep endpoint
-details and response types inside the provider adapter so callers only depend on
-`SubscriptionProvider`.
+1. Copy `src/providers/_template.ts` to `src/providers/<provider-id>.ts` and implement `fetch()`
+2. Return failures through `SubscriptionInfo.error` — never throw
+3. Register it in `src/providers/index.ts`
+4. Add the origin to `optional_host_permissions` in `manifest.json`
+5. Add an SVG logo to `public/logos/` and update the privacy documentation
+6. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`
 
-### Adding a new language
+### Adding a language
 
-1. Create `src/i18n/locales/<code>.ts` (use `en.ts` as template)
-2. Import and register in `src/i18n/index.ts`
+1. Create `src/i18n/locales/<code>.ts` using `en.ts` as the template
+2. Register it in `src/i18n/index.ts`
 3. Add the locale to the `locales` array in `src/popup/App.tsx`
 
-## Feedback
+## Contributing
 
-- If you find SubLens useful, please give it a ⭐
-- Found a bug or have a feature request? [Open an issue](https://github.com/heartleo/sublens/issues).
+Issues and pull requests are welcome. Keep commits scoped, use Conventional Commit subjects
+(`feat:`, `fix:`, `docs:`), and include before/after screenshots for UI changes.
+
+## License
+
+[MIT](LICENSE). Product names and logos are trademarks of their respective owners; icon attribution
+is in [public/logos/THIRD_PARTY_NOTICES.md](public/logos/THIRD_PARTY_NOTICES.md).

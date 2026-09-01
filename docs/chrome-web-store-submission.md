@@ -1,110 +1,135 @@
 # Chrome Web Store submission — v0.2.1
 
 Copy-paste reference for the [Developer Dashboard](https://chrome.google.com/webstore/devconsole) listing at
-https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh (currently live at 0.1.1).
+https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh (live at 0.1.1).
 
 ## Package
 
-- `npm run build` produces `dist/`.
-- Zip the **contents** of `dist/`, not the folder itself — `manifest.json` must sit at the root of the
-  uploaded zip. The `release.yml` GitHub Actions zip (`sublens-vX.X.X.zip`) is **not** upload-ready as-is:
-  it zips `dist/` as a subfolder for the unpacked-extension install flow in the README, so build a separate
-  zip for the Store (`cd dist && zip -r ../sublens-store-v0.2.1.zip .`).
+```bash
+npm run build
+cd dist && zip -r ../sublens-store-v0.2.1.zip . && cd ..
+```
+
+Zip the **contents** of `dist/`, not the folder — `manifest.json` must sit at the zip root. The
+`release.yml` GitHub Actions artifact zips `dist/` as a subfolder for the unpacked-install flow in the
+README, so it is deliberately not the file you upload here.
+
+Two things worth trimming before a release build if package size ever matters: `dist/icons/icon.png`
+is the 865 KB source art that the manifest never references (only the generated 16/48/128 sizes), and
+`dist/logos/huggingface.ico` is 200 KB. Neither blocks submission — the whole package is ~1.6 MB.
 
 ## Store listing
 
-**Category:** Productivity
+**Category:** Productivity · **Language:** English (UI also ships Simplified Chinese)
 
-**Language:** English (primary listing); UI also ships Simplified Chinese.
+**Single purpose:** SubLens is a launcher for AI tools that can optionally show the subscription
+plans you connect.
 
-**Single purpose:** SubLens is a launcher for AI tools that can optionally show the subscription plans
-you connect.
+**Short description** (132 max — this is 116):
 
-**Short description** (132 char max — this is 116):
-> Launch your AI tools in one click and see the subscriptions you connect. Everything stays on your device.
+```
+Launch your AI tools in one click and see the subscriptions you connect. Everything stays on your device.
+```
 
 **Detailed description:**
+
 ```
 Your AI tools, one shortcut away.
 
-SubLens is a fast, keyboard-first launcher for AI tools: search, favorite, and open ChatGPT, Claude,
-Gemini, Cursor, GitHub Copilot, and 14 built-in tools without hunting for tabs or bookmarks. Add any
-other AI tool by URL and it launches alongside the built-in catalog.
+You probably have five AI tools open in five tabs. SubLens puts them behind one popup: search,
+favorite, and launch ChatGPT, Claude, Gemini, Cursor, GitHub Copilot and 14 built-in tools without
+hunting through bookmarks. Add any other AI site by URL and it launches right alongside them.
 
-Connect a subscription provider only if you want it: SubLens can show your plan, price, and next
-billing date for ChatGPT, Claude, GitHub Copilot, and Cursor, plus a running total of what you're
-paying across them.
+Then, only if you want it, connect a subscription: SubLens shows your plan, price and next billing
+date for ChatGPT, Claude, GitHub Copilot and Cursor, plus what you're paying across all of them each
+month.
 
-- Fast search across tool names, aliases, and categories
-- Ctrl/Cmd+K keyboard workflow: search, arrow keys, Enter, Escape
-- Favorites and recent launches, saved locally
-- Add, hide, or reorder tools from Settings
-- Light, dark, or system theme
-- English and Simplified Chinese
+FEATURES
+• Search across names, aliases, categories and tags
+• Ctrl/Cmd+K, arrow keys, Enter — the whole flow works without a mouse
+• Favorites and recently launched tools, saved locally
+• Add, hide, reorder, and re-icon tools from Settings
+• Light, dark, or follow your system
+• English and Simplified Chinese
 
-Privacy: SubLens only requests access to a provider when you click Connect. All data — favorites,
-recents, subscription snapshots — stays in chrome.storage.local on your device. No external servers,
-no analytics, no tracking. Full policy: https://heartleo.github.io/sublens/privacy.html
+PRIVACY
+SubLens has no backend. Favorites, recents, custom tools and subscription snapshots stay in
+chrome.storage.local on your machine. No analytics, no tracking, no account. Access to a provider is
+requested only when you click Connect, uses the session you're already signed in with, and never
+reads or stores cookie values. Disconnecting revokes it.
+
+Open source (MIT): https://github.com/heartleo/sublens
+Privacy policy: https://heartleo.github.io/sublens/privacy.html
 ```
 
-**What's new in this version** (the store has been stuck at 0.1.1; this update ships two feature
-generations at once, so say so instead of writing a one-line patch note):
-```
-Major update since 0.1.1 — the popup was rebuilt around a launcher-first design:
+**What's new in this version** — the store has been at 0.1.1 while two feature generations shipped,
+so the note says that rather than pretending it's a patch:
 
-- New: search, keyboard navigation (Ctrl/Cmd+K), favorites, and recently-launched tools
-- New: add any AI tool by URL as a Custom Tool, with automatic/favicon/upload/letter icons
-- New: Settings page for tools, subscription connections, and preferences (theme/language)
-- New: subscription cards refresh right when you open the panel and every 60s while it's open,
-  not just on the 15-minute background timer
-- Changed: provider access is requested per-provider on demand instead of at install time
+```
+A big update since 0.1.1 — the popup is now a launcher first.
+
+• New: search, keyboard navigation (Ctrl/Cmd+K), favorites, and recently launched tools
+• New: add any AI tool by URL as a custom tool, with automatic/favicon/upload/letter icons
+• New: Settings page for tools, subscription connections, theme and language
+• New: subscription cards refresh when you open the panel and every 60s while it's open, instead of
+  waiting for the 15-minute background refresh
+• Changed: provider access is requested per provider when you connect, not at install time
 ```
 
-**Homepage URL:** https://heartleo.github.io/sublens/
-**Support URL:** https://github.com/heartleo/sublens/issues
-**Privacy policy URL:** https://heartleo.github.io/sublens/privacy.html
+**Homepage:** https://heartleo.github.io/sublens/
+**Support:** https://github.com/heartleo/sublens/issues
+**Privacy policy:** https://heartleo.github.io/sublens/privacy.html
 
 ## Privacy practices tab
 
-Mirror `docs/privacy.html` §05 word-for-word — it's the single source of truth, update both together.
+Mirrors `docs/privacy.html` §05 — that page is the single source of truth, so update both together.
 
 | Permission | Justification |
 | --- | --- |
 | `storage` | Save favorites, recent launches, usage counts, preferences, and subscription snapshots locally using `chrome.storage.local`. |
 | `alarms` | Schedule a background refresh of subscription data every 15 minutes. |
 | `favicon` (optional) | Show a custom tool's site icon next to its name when the user chooses the favicon icon option while adding it. |
-| Host permissions (optional): `cursor.com`, `github.com`, `chatgpt.com`, `claude.ai` | Make authenticated requests only to the subscription provider the user clicks Connect on, using the browser's existing session for that site. Requested per-provider at the moment of connection, not at install. |
+| Host permissions (optional): `cursor.com`, `github.com`, `chatgpt.com`, `claude.ai` | Make authenticated requests only to the subscription provider the user clicks Connect on, using the browser's existing session for that site. Requested per provider at the moment of connection, not at install. |
 
-**Are you using remote code?** No — everything ships in the extension bundle.
+**Remote code:** No — everything ships in the package.
 
-**Data usage disclosure:** Declare no categories collected (personally identifiable info, health,
-financial, authentication, personal communications, location, web history, user activity, website
-content) — nothing SubLens touches leaves the device; `chrome.storage.local` never syncs to a server
-SubLens controls. Check all three certification boxes (no selling data, no use outside the single
-purpose, no use for credit/lending decisions).
+**Data usage:** Declare no collected categories (personally identifiable info, health, financial,
+authentication, personal communications, location, web history, user activity, website content).
+Nothing SubLens touches leaves the device. Check all three certifications (no data sold or
+transferred, no use outside the single purpose, no use for creditworthiness or lending).
 
-## Screenshots — need to be recaptured
+## Assets — ready to upload
 
-`docs/screenshot_dark.png` / `docs/screenshot_light.png` are 760×1000 (popup-only crops used on the
-landing page). The Store requires 1280×800 or 640×400 (16:10) screenshots, 1–5 of them. Recommended
-set once the popup is open in a normal browser tab/window at the right size:
+All generated from the real 0.2.1 build (`docs/screenshots/`):
 
-1. Home tab — favorites + recents + subscription summary (dark)
-2. Home tab — same (light)
-3. Tools tab — search results or category grid
-4. Subscriptions panel — connected providers with plan/price
-5. Settings page — Tools tab (Custom Tool add flow)
+| File | Size | Use |
+| --- | --- | --- |
+| `store-1-launcher.png` | 1280×800 | Screenshot 1 — launcher home |
+| `store-2-subscriptions.png` | 1280×800 | Screenshot 2 — connected subscriptions |
+| `store-3-search.png` | 1280×800 | Screenshot 3 — search and keyboard launch |
+| `store-4-custom.png` | 1280×800 | Screenshot 4 — settings and custom tools |
+| `store-5-themes.png` | 1280×800 | Screenshot 5 — light and dark |
+| `promo-440x280.png` | 440×280 | Small promo tile |
 
-I can't capture these myself (browser automation is blocked from `chrome-extension://` pages); they
-need to be taken manually, e.g. via OS screenshot tools with the popup pinned open ("Inspect popup" in
-DevTools keeps it open) or the options page in a normal tab.
+Store icon (128×128) needs nothing prepared: the build plugin in `vite.config.ts` generates
+`icons/icon{16,48,128}.png` from `public/icons/icon.png` on every `npm run build`.
 
-## Promo images (optional, only needed if requesting a featured placement)
+A 1400×560 marquee is only needed if you request featured placement; there isn't one yet.
 
-- Small tile: 440×280
-- Marquee: 1400×560
+### Regenerating the assets
 
-## Icon
+Screenshots are rendered from the built extension with Playwright against a mocked `chrome.*` API, so
+they can be regenerated after any UI change rather than recaptured by hand:
 
-128×128 required — already covered: `vite.config.ts`'s build plugin generates `icons/icon{16,48,128}.png`
-from `public/icons/icon.png` on every `npm run build`. Nothing to prepare here.
+1. `npm run build && npm run preview` (serves `dist/` on :4173)
+2. Drive `popup.html?theme=dark|light&view=home|tools` and `options.html` with an init script that
+   stubs `chrome.storage.local`, `chrome.permissions`, and `chrome.runtime` with seeded state
+3. Capture the popup at its real 400×600 box, then composite onto the 1280×800 branded frame
+
+## Before you submit
+
+- [ ] `manifest.json` version is higher than the published one (0.2.1 > 0.1.1) ✅
+- [ ] `npm run lint && npm run typecheck && npm test && npm run build` all pass
+- [ ] Store zip has `manifest.json` at its root
+- [ ] GitHub Pages is publishing `docs/`, so the privacy policy URL resolves
+- [ ] Screenshots reflect the version being uploaded
