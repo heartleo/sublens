@@ -53,7 +53,6 @@ const zh: LocaleMessages = {
   noFavoritesTitle: "暂无收藏",
   noFavoritesCopy: "点击工具旁的星标，将它固定在这里。",
   subscriptions: "订阅",
-  permissionExplanation: "只连接你希望 SubLens 查询的账户。",
   manage: "管理",
   connect: "连接",
   connected: "已连接",

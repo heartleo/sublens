@@ -55,10 +55,7 @@ export function SubscriptionPanel({
         aria-labelledby="subs-title"
       >
         <header className="panel-header">
-          <div>
-            <h2 id="subs-title">{t.subscriptions}</h2>
-            <p>{t.permissionExplanation}</p>
-          </div>
+          <h2 id="subs-title">{t.subscriptions}</h2>
           <button
             autoFocus
             className="icon-button"
@@ -92,7 +89,11 @@ export function SubscriptionPanel({
                     </span>
                   </span>
                   {connected ? (
-                    <span className={snapshot?.error ? "provider-error" : "provider-detail"}>
+                    <span
+                      className={snapshot?.error ? "provider-error" : "provider-detail"}
+                      role="status"
+                      aria-atomic="true"
+                    >
                       {snapshot?.error
                         ? snapshot.error
                         : snapshot

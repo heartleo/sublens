@@ -908,21 +908,10 @@ section {
   margin-bottom: 10px;
 }
 
-.panel-header > div:first-child {
-  min-width: 0;
-}
-
 .panel-header h2 {
-  margin: 0 0 3px;
-  font-size: 16px;
-}
-
-.panel-header p {
-  max-width: 280px;
   margin: 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: 16px;
+  min-width: 0;
 }
 
 .provider-list {
@@ -971,7 +960,7 @@ section {
   border-radius: 999px;
   background: var(--success-soft);
   color: var(--success);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.01em;
   line-height: 16px;

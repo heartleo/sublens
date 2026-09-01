@@ -51,7 +51,6 @@ const en = {
   noFavoritesTitle: "No favorites yet",
   noFavoritesCopy: "Use the star beside a tool to pin it here.",
   subscriptions: "Subscriptions",
-  permissionExplanation: "Connect only the accounts you want SubLens to observe.",
   manage: "Manage",
   connect: "Connect",
   connected: "Connected",

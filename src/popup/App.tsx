@@ -176,6 +176,25 @@ export default function App({ initialPreferences }: AppProps) {
   }, [notice]);
 
   useEffect(() => {
+    if (!subscriptionsOpen) return;
+
+    let lastRefreshAt = 0;
+    const refreshSubscriptions = async () => {
+      lastRefreshAt = Date.now();
+      await chrome.runtime.sendMessage({ type: "refresh" });
+      await loadRuntimeState();
+    };
+
+    void refreshSubscriptions();
+    const interval = window.setInterval(() => void refreshSubscriptions(), 60_000);
+
+    return () => {
+      window.clearInterval(interval);
+      if (Date.now() - lastRefreshAt > 3000) void refreshSubscriptions();
+    };
+  }, [subscriptionsOpen, loadRuntimeState]);
+
+  useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
