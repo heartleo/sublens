@@ -39,7 +39,7 @@
 
 ### Chrome Web Store
 
-> Coming soon
+[Add SubLens to Chrome](https://chromewebstore.google.com/detail/sublens/ckhnoellkkppjdcdkcombflmkehabdnh)
 
 ### Download from releases
 
