@@ -2,9 +2,9 @@
 
 ## Project Structure & Architecture
 
-SubLens is a Chrome Manifest V3 extension built with React, TypeScript, and Vite. The popup starts at `popup.html` and `src/popup/main.tsx`; UI components and styles live under `src/popup/`. The background service worker is `src/background/index.ts`. Provider integrations belong in `src/providers/`, shared storage helpers in `src/storage.ts`, and translations in `src/i18n/`. Put source assets in `public/` (`public/logos/` for provider logos); Vite produces the loadable extension in `dist/`. The `docs/` directory contains the GitHub Pages site, privacy policy, and screenshots.
+SubLens is a Chrome Manifest V3 extension built with React, TypeScript, and Vite. The popup starts at `popup.html` and `src/popup/main.tsx`; the settings page (opened in its own tab) starts at `options.html` and `src/options/main.tsx`. The background service worker is `src/background/index.ts`. Provider integrations belong in `src/providers/`, the tool catalog in `src/tools/`, runtime host-permission handling in `src/permissions/`, launch/recording logic in `src/launcher/`, versioned `chrome.storage.local` state in `src/storage/`, theme/locale prefs in `src/preferences/`, and translations in `src/i18n/`. Put source assets in `public/` (`public/logos/` for provider logos); Vite produces the loadable extension in `dist/`. The `docs/` directory contains the GitHub Pages site, privacy policy, and screenshots.
 
-Provider fetches use cookie-based authentication and should return `SubscriptionInfo` with its `error` field populated on failure. When adding a provider, implement `SubscriptionProvider`, register it in `src/providers/index.ts`, add its host permission to `manifest.json`, and supply a logo.
+Providers authenticate with `fetch(url, { credentials: "include" })`, relying on Chrome to attach the connected site's existing session cookies — they never read cookie values directly. Fetches should return `SubscriptionInfo` with its `error` field populated on failure. When adding a provider, implement `SubscriptionProvider`, register it in `src/providers/index.ts`, add its origin to `optional_host_permissions` in `manifest.json` (host access is requested at runtime on Connect, not granted statically), and supply a logo.
 
 ## Build, Test, and Development Commands
 
@@ -24,7 +24,7 @@ Prettier enforces 2-space indentation, semicolons, double quotes, trailing ES5 c
 
 ## Testing Guidelines
 
-No automated test framework or coverage target is configured. Before submitting changes, run `npm run lint`, `npm run format:check`, `npm run typecheck`, and `npm run build`. Smoke-test the unpacked extension in Chrome, especially refresh messaging, storage persistence, provider error states, theme/locale switching, and any UI interaction you changed.
+Run `npm test` (Vitest) for logic modules — tests live next to their source as `*.test.ts`. No coverage target is enforced. Before submitting changes, also run `npm run lint`, `npm run format:check`, `npm run typecheck`, and `npm run build`. Smoke-test the unpacked extension in Chrome, especially refresh messaging, storage persistence, provider error states, theme/locale switching, and any UI interaction you changed.
 
 ## Commits & Pull Requests
 

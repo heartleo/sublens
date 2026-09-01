@@ -2,7 +2,7 @@
 
 ## 目标与当前基线
 
-目标是把现有订阅追踪扩展升级为 Launcher First 的 AI Command Center，同时保留本地存储和订阅汇总。当前正式代码仍以 `src/popup/App.tsx` 的订阅卡片为主；`docs/launcher-preview.html` 仅是交互设计参考，不应成为产品数据源。
+目标是把现有订阅追踪扩展升级为 Launcher First 的 AI Command Center，同时保留本地存储和订阅汇总。
 
 首版目录固定为 14 个工具：Chat 5、Create 3、Code 3、Platform 2、Research 1。v0、Sora、Windsurf、Adobe Firefly、Replit Agent、Poe、Elicit、Perplexity 暂不进入默认目录。
 
@@ -45,9 +45,9 @@ interface SubscriptionProvider {
 
 ## 分阶段交付
 
-> 实现状态（2026-08-27）：Phase 0、v0.2、v0.4 已完成；v0.3 已完成搜索、键盘操作和
-> Recent，Custom Tool 尚未实现；v0.5 仅完成使用次数与最近打开时间的数据基础；Commands、
-> Omnibox、Most Used UI 和 v0.6 Prompt Router 尚未实现。
+> 实现状态（2026-09-01）：Phase 0、v0.2、v0.3、v0.4 已完成，含 Custom Tool；v0.5 仅完成
+> 使用次数与最近打开时间的数据基础；Commands、Omnibox、Most Used UI 和 v0.6 Prompt Router
+> 尚未实现。
 
 ### Phase 0：基线清理
 
