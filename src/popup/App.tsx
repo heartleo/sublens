@@ -181,7 +181,11 @@ export default function App({ initialPreferences }: AppProps) {
     let lastRefreshAt = 0;
     const refreshSubscriptions = async () => {
       lastRefreshAt = Date.now();
-      await chrome.runtime.sendMessage({ type: "refresh" });
+      try {
+        await chrome.runtime.sendMessage({ type: "refresh" });
+      } catch {
+        return;
+      }
       await loadRuntimeState();
     };
 
@@ -253,9 +257,13 @@ export default function App({ initialPreferences }: AppProps) {
   }, 0);
 
   const handleOpen = useCallback(async (toolId: string) => {
-    const result = await chrome.runtime.sendMessage({ type: "open-tool", toolId });
-    if (result?.status && result.status !== "opened") setNotice(result.message ?? result.status);
-  }, []);
+    try {
+      const result = await chrome.runtime.sendMessage({ type: "open-tool", toolId });
+      if (result?.status && result.status !== "opened") setNotice(result.message ?? result.status);
+    } catch {
+      setNotice(t.connectionFailed);
+    }
+  }, [t.connectionFailed]);
 
   const handleFavorite = useCallback(
     async (toolId: string, favorite: boolean) => {
