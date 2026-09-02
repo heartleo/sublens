@@ -42,6 +42,15 @@ function resetPopupScroll(): void {
   document.body.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
+// One retry absorbs the "Receiving end does not exist" race when the message wakes a torn-down service worker.
+async function sendMessageWithRetry<T>(message: unknown): Promise<T> {
+  try {
+    return await chrome.runtime.sendMessage(message);
+  } catch {
+    return chrome.runtime.sendMessage(message);
+  }
+}
+
 function monthlyPrice(price: string): number | null {
   if (!price.startsWith("$") || price.includes("/user")) return null;
   const amount = Number(price.match(/^\$([\d.]+)/)?.[1]);
@@ -182,7 +191,7 @@ export default function App({ initialPreferences }: AppProps) {
     const refreshSubscriptions = async () => {
       lastRefreshAt = Date.now();
       try {
-        await chrome.runtime.sendMessage({ type: "refresh" });
+        await sendMessageWithRetry({ type: "refresh" });
       } catch {
         return;
       }
@@ -258,12 +267,15 @@ export default function App({ initialPreferences }: AppProps) {
 
   const handleOpen = useCallback(async (toolId: string) => {
     try {
-      const result = await chrome.runtime.sendMessage({ type: "open-tool", toolId });
+      const result = await sendMessageWithRetry<{ status?: string; message?: string }>({
+        type: "open-tool",
+        toolId,
+      });
       if (result?.status && result.status !== "opened") setNotice(result.message ?? result.status);
     } catch {
-      setNotice(t.connectionFailed);
+      setNotice(t.openFailed);
     }
-  }, [t.connectionFailed]);
+  }, [t.openFailed]);
 
   const handleFavorite = useCallback(
     async (toolId: string, favorite: boolean) => {

@@ -61,6 +61,7 @@ const en = {
   connectionGranted: "Provider connected",
   connectionDenied: "Permission was not granted",
   connectionFailed: "Could not update provider access",
+  openFailed: "Could not open the tool, please retry",
   working: "Working…",
   close: "Close",
 };

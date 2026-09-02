@@ -63,6 +63,7 @@ const zh: LocaleMessages = {
   connectionGranted: "Provider 已连接",
   connectionDenied: "未授予权限",
   connectionFailed: "无法更新 Provider 权限",
+  openFailed: "打开失败，请重试",
   working: "处理中…",
   close: "关闭",
 };
