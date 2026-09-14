@@ -5,8 +5,10 @@ import { createPermissionManager } from "../permissions";
 import { preferencesStore, type Preferences, type ThemeMode } from "../preferences";
 import { providers } from "../providers";
 import { isFreePlan } from "../providers/base";
+import { createLauncher } from "../launcher";
 import { extensionStorage, type ExtensionState } from "../storage";
 import {
+  findTool,
   listTools,
   orderTools as orderCatalogTools,
   searchTools,
@@ -42,14 +44,44 @@ function resetPopupScroll(): void {
   document.body.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
-// One retry absorbs the "Receiving end does not exist" race when the message wakes a torn-down service worker.
-async function sendMessageWithRetry<T>(message: unknown): Promise<T> {
-  try {
-    return await chrome.runtime.sendMessage(message);
-  } catch {
-    return chrome.runtime.sendMessage(message);
-  }
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// Retries with backoff absorb the "Receiving end does not exist" race when the message wakes a
+// torn-down service worker — an immediate single retry can still land before Windows finishes
+// the cold start, so give it a few spaced attempts before surfacing a failure.
+const RETRY_DELAYS_MS = [0, 150, 400, 800];
+
+async function sendMessageWithRetry<T>(message: unknown): Promise<T> {
+  let lastError: unknown;
+  for (const wait of RETRY_DELAYS_MS) {
+    if (wait > 0) await delay(wait);
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
+// Opens tools directly from the popup instead of round-tripping through the background service
+// worker: chrome.storage and chrome.tabs are available here without waking a torn-down SW, so this
+// action no longer races the SW cold-start that caused intermittent "Could not open the tool" failures.
+const launcher = createLauncher({
+  async findTool(toolId) {
+    const state = await extensionStorage.load();
+    return findTool(toolId, state.customTools);
+  },
+  async openTab(url) {
+    await chrome.tabs.create({ url });
+  },
+  async recordLaunch(toolId, openedAt) {
+    await extensionStorage.recordLaunch(toolId, openedAt);
+  },
+  now: () => new Date(),
+});
 
 function monthlyPrice(price: string): number | null {
   if (!price.startsWith("$") || price.includes("/user")) return null;
@@ -267,11 +299,10 @@ export default function App({ initialPreferences }: AppProps) {
 
   const handleOpen = useCallback(async (toolId: string) => {
     try {
-      const result = await sendMessageWithRetry<{ status?: string; message?: string }>({
-        type: "open-tool",
-        toolId,
-      });
-      if (result?.status && result.status !== "opened") setNotice(result.message ?? result.status);
+      const result = await launcher.openTool(toolId);
+      if (result.status !== "opened") {
+        setNotice(result.status === "failed" ? result.message : t.openFailed);
+      }
     } catch {
       setNotice(t.openFailed);
     }

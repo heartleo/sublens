@@ -1,11 +1,33 @@
-import { createLauncher } from "../launcher";
 import { providers } from "../providers";
 import { isFreePlan, type SubscriptionInfo } from "../providers/base";
 import { extensionStorage } from "../storage";
-import { findTool } from "../tools";
 
 const ALARM_NAME = "sublens-refresh";
 const REFRESH_INTERVAL_MINUTES = 15;
+
+function swLog(...args: unknown[]): void {
+  console.log(`[SW ${new Date().toISOString()}]`, ...args);
+}
+
+function swError(...args: unknown[]): void {
+  console.error(`[SW ${new Date().toISOString()}]`, ...args);
+}
+
+swLog("start", chrome.runtime.id, chrome.runtime.getManifest().version);
+
+self.addEventListener("error", (event) => {
+  swError("uncaught error", {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    error: event.error,
+  });
+});
+
+self.addEventListener("unhandledrejection", (event) => {
+  swError("unhandled rejection", event.reason);
+});
 
 async function isProviderConnected(providerId: string): Promise<boolean> {
   const provider = providers.find((candidate) => candidate.id === providerId);
@@ -53,41 +75,34 @@ async function refreshConnectedProviders(): Promise<void> {
   await updateBadge();
 }
 
-const launcher = createLauncher({
-  async findTool(toolId) {
-    const state = await extensionStorage.load();
-    return findTool(toolId, state.customTools);
-  },
-  async openTab(url) {
-    await chrome.tabs.create({ url });
-  },
-  async recordLaunch(toolId, openedAt) {
-    await extensionStorage.recordLaunch(toolId, openedAt);
-  },
-  now: () => new Date(),
-});
-
 chrome.alarms.create(ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) void refreshConnectedProviders();
+  if (alarm.name === ALARM_NAME) void refreshConnectedProviders().catch((err) => swError("alarm refresh failed", err));
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  void refreshConnectedProviders();
+  void refreshConnectedProviders().catch((err) => swError("onInstalled refresh failed", err));
 });
 
 chrome.permissions.onRemoved.addListener(() => {
-  void updateBadge();
+  void updateBadge().catch((err) => swError("badge update failed", err));
 });
 
-void updateBadge();
+void updateBadge()
+  .then(() => swLog("init success"))
+  .catch((err) => swError("init failed", err));
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (typeof message !== "object" || message === null || !("type" in message)) return;
 
   if (message.type === "refresh") {
-    void refreshConnectedProviders().then(() => sendResponse({ ok: true }));
+    void refreshConnectedProviders()
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        swError("refresh message failed", err);
+        sendResponse({ ok: false });
+      });
     return true;
   }
   if (message.type === "refresh-provider" && "providerId" in message) {
@@ -99,33 +114,47 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
           error: snapshot?.error ?? (snapshot ? null : "Provider is not connected"),
         });
       })
-      .catch(() => sendResponse({ ok: false, error: "Provider refresh failed" }));
+      .catch((err) => {
+        swError("refresh-provider message failed", err);
+        sendResponse({ ok: false, error: "Provider refresh failed" });
+      });
     return true;
   }
   if (message.type === "update-badge") {
-    void updateBadge().then(() => sendResponse({ ok: true }));
-    return true;
-  }
-  if (message.type === "open-tool" && "toolId" in message) {
-    void launcher.openTool(String(message.toolId)).then(sendResponse);
+    void updateBadge()
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        swError("update-badge message failed", err);
+        sendResponse({ ok: false });
+      });
     return true;
   }
   if (message.type === "set-favorite" && "toolId" in message && "favorite" in message) {
     void extensionStorage
       .setFavorite(String(message.toolId), Boolean(message.favorite))
-      .then(() => sendResponse({ ok: true }));
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        swError("set-favorite message failed", err);
+        sendResponse({ ok: false });
+      });
     return true;
   }
   if (message.type === "open-provider-login" && "providerId" in message) {
-    void extensionStorage.load().then(async (state) => {
-      const snapshot = state.subscriptions[String(message.providerId)];
-      if (snapshot?.loginUrl?.startsWith("https://")) {
-        await chrome.tabs.create({ url: snapshot.loginUrl });
-        sendResponse({ ok: true });
-      } else {
+    void extensionStorage
+      .load()
+      .then(async (state) => {
+        const snapshot = state.subscriptions[String(message.providerId)];
+        if (snapshot?.loginUrl?.startsWith("https://")) {
+          await chrome.tabs.create({ url: snapshot.loginUrl });
+          sendResponse({ ok: true });
+        } else {
+          sendResponse({ ok: false });
+        }
+      })
+      .catch((err) => {
+        swError("open-provider-login message failed", err);
         sendResponse({ ok: false });
-      }
-    });
+      });
     return true;
   }
 });
