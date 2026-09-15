@@ -129,9 +129,10 @@ vocabulary lives in [CONTEXT.md](CONTEXT.md).
 
 ### Adding a language
 
-1. Create `src/i18n/locales/<code>.ts` using `en.ts` as the template
-2. Register it in `src/i18n/index.ts`
-3. Add the locale to the `locales` array in `src/popup/App.tsx`
+1. Create `src/i18n/locales/<code>.ts` using `en.ts` as the template and register it in `src/i18n/index.ts`
+2. Add a matching dictionary for `<code>` in `src/options/messages.ts` — the options page has its own,
+   separate translation dictionary — and register it in `getOptionsMessages()`
+3. Add the language to the `<select>` options in `src/options/App.tsx`
 
 ## Contributing
 

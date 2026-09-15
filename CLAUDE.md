@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SubLens (repo: sublens) is a Chrome Extension (Manifest V3) combining a fast AI-tool launcher with local, opt-in subscription tracking across services (Cursor, GitHub Copilot, ChatGPT, Claude, ...). The popup is the launcher/dashboard; a separate options page (opened in a tab) manages custom tools, provider connections, and preferences. Provider fetches run from the background service worker.
 
-See `CONTEXT.md` for the domain vocabulary (Tool vs Built-in Tool vs Custom Tool, Subscription Provider, Subscription Snapshot, Connection, Launch) — use these terms, not their `_Avoid_` synonyms, in code, comments, and commit messages.
+See `CONTEXT.md` for the domain vocabulary (Tool vs Built-in Tool vs Custom Tool, Subscription Provider, Subscription Snapshot, Connection, Launch) — use these terms, not their `_Avoid_` synonyms, in code, comments, and commit messages. See `AGENTS.md` for coding style (Prettier config, naming conventions), the pre-submit checklist, and commit/PR conventions.
 
 ## Commands
 
@@ -15,9 +15,9 @@ See `CONTEXT.md` for the domain vocabulary (Tool vs Built-in Tool vs Custom Tool
 - **Type check:** `npm run typecheck`
 - **Lint:** `npm run lint` / `npm run lint:fix`
 - **Format:** `npm run format` / `npm run format:check`
-- **Tests:** `npm test` (vitest run). Test files sit next to their source as `*.test.ts`.
+- **Tests:** `npm test` (vitest run). Test files sit next to their source as `*.test.ts` and run in a `node` environment (see `vitest.config.ts`) — this covers logic modules (storage, providers, permissions, tools), not React components. Run a single file with `npx vitest run src/storage/index.test.ts`, or filter by name with `npx vitest run -t "pattern"`.
 
-Load `dist/` via `chrome://extensions` (Developer mode) for manual extension testing.
+CI (`.github/workflows/ci.yml`, Node 20) runs, in order: `lint` → `format:check` → `typecheck` → `test` → `build`. Load `dist/` via `chrome://extensions` (Developer mode) for manual extension testing.
 
 ## Architecture
 
@@ -50,7 +50,7 @@ Load `dist/` via `chrome://extensions` (Developer mode) for manual extension tes
 - All mutations go through a serialized `mutate()` queue to avoid read-modify-write races
 - Data is keyed by provider id (subscriptions) or tool id (favorites, recent, usage, custom tools, ordering)
 
-**i18n** (`src/i18n/`): `locales/en.ts` and `locales/zh.ts`; `Locale` type is `"en" | "zh"`.
+**i18n**: two independent translation dictionaries share only the `Locale` type (`"en" | "zh"`, defined in `src/i18n/index.ts`) — `src/i18n/locales/{en,zh}.ts` for the popup, and `src/options/messages.ts` (its own `OptionsMessages` type and `getOptionsMessages()`) for the options page. Adding a string to one does not add it to the other.
 
 **Communication:** popup/options send messages like `{ type: "refresh" }`, `{ type: "refresh-provider", providerId }`, `{ type: "open-tool", toolId }`, `{ type: "set-favorite", toolId, favorite }`, `{ type: "open-provider-login", providerId }` to the background worker. Subscription data is refreshed only on these explicit triggers — the popup's Subscriptions panel refresh button, connecting a provider, or the options page's per-provider Refresh button — there is no periodic background refresh.
 
@@ -61,6 +61,12 @@ Load `dist/` via `chrome://extensions` (Developer mode) for manual extension tes
 3. Register the exported provider in `src/providers/index.ts` (both the `export` line and the `providers` array).
 4. Add a logo SVG to `public/logos/`.
 5. Add a `permissions/index.ts`-style `ProviderAccessDefinition` entry if the provider needs a connect/disconnect UI flow in options.
+
+## Adding a Language
+
+1. Create `src/i18n/locales/<code>.ts` using `en.ts` as the template and register it in the `messages` map in `src/i18n/index.ts`.
+2. Add a matching object for `<code>` in `src/options/messages.ts` (a separate dictionary — see i18n above) and register it in `getOptionsMessages()`.
+3. Add the `{ value, label }` entry to the language `<select>` options in `src/options/App.tsx`.
 
 ## Key Conventions
 
