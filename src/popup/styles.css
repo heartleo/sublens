@@ -914,6 +914,53 @@ section {
   min-width: 0;
 }
 
+.panel-heading {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.panel-updated {
+  overflow: hidden;
+  color: var(--text-subtle);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.refresh-button svg {
+  transition: transform 0.4s ease;
+}
+
+.refresh-button:hover:not(:disabled) svg {
+  transform: rotate(50deg);
+}
+
+.refresh-button.is-spinning svg {
+  animation: subscription-refresh-spin 0.85s linear infinite;
+}
+
+.refresh-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+@keyframes subscription-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refresh-button svg {
+    transition: none;
+  }
+
+  .refresh-button.is-spinning svg {
+    animation: none;
+  }
+}
+
 .provider-list {
   display: grid;
   gap: 6px;

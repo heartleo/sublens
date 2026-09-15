@@ -52,7 +52,7 @@ Load `dist/` via `chrome://extensions` (Developer mode) for manual extension tes
 
 **i18n** (`src/i18n/`): `locales/en.ts` and `locales/zh.ts`; `Locale` type is `"en" | "zh"`.
 
-**Communication:** popup/options send messages like `{ type: "refresh" }`, `{ type: "refresh-provider", providerId }`, `{ type: "open-tool", toolId }`, `{ type: "set-favorite", toolId, favorite }`, `{ type: "open-provider-login", providerId }` to the background worker; it also runs a `sublens-refresh` alarm every 15 minutes and refreshes on install.
+**Communication:** popup/options send messages like `{ type: "refresh" }`, `{ type: "refresh-provider", providerId }`, `{ type: "open-tool", toolId }`, `{ type: "set-favorite", toolId, favorite }`, `{ type: "open-provider-login", providerId }` to the background worker. Subscription data is refreshed only on these explicit triggers — the popup's Subscriptions panel refresh button, connecting a provider, or the options page's per-provider Refresh button — there is no periodic background refresh.
 
 ## Adding a New Provider
 

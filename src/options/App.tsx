@@ -5,6 +5,7 @@ import type { Locale } from "../i18n";
 import { createPermissionManager } from "../permissions";
 import { preferencesStore, type Preferences } from "../preferences";
 import { providers } from "../providers";
+import { sendMessageWithRetry } from "../runtime/sendMessageWithRetry";
 import { extensionStorage, type ExtensionState } from "../storage";
 import {
   createCustomTool,
@@ -619,6 +620,17 @@ export default function App({ initialPreferences }: AppProps) {
       setPendingProviderId(null);
     }
   };
+  const signIn = async (providerId: string) => {
+    try {
+      const result = await sendMessageWithRetry<{ ok: boolean }>({
+        type: "open-provider-login",
+        providerId,
+      });
+      if (!result?.ok) setNotice(t.openFailed);
+    } catch {
+      setNotice(t.openFailed);
+    }
+  };
   const refreshProvider = async (providerId: string) => {
     setPendingProviderId(providerId);
     try {
@@ -875,12 +887,7 @@ export default function App({ initialPreferences }: AppProps) {
                         <button
                           type="button"
                           className="text-button"
-                          onClick={() =>
-                            void chrome.runtime.sendMessage({
-                              type: "open-provider-login",
-                              providerId: provider.id,
-                            })
-                          }
+                          onClick={() => void signIn(provider.id)}
                         >
                           {t.signIn}
                         </button>

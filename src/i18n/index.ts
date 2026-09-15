@@ -38,3 +38,26 @@ export function formatDate(isoDate: string, locale: Locale): string {
     year: "numeric",
   });
 }
+
+const RELATIVE_TIME_UNITS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ["year", 31_536_000],
+  ["month", 2_592_000],
+  ["day", 86_400],
+  ["hour", 3_600],
+  ["minute", 60],
+  ["second", 1],
+];
+
+/** Format an ISO timestamp as "3 minutes ago" / "3分钟前" relative to now. */
+export function formatRelativeTime(isoTimestamp: string, locale: Locale): string {
+  const then = new Date(isoTimestamp).getTime();
+  if (isNaN(then)) return "";
+  const diffSeconds = Math.round((then - Date.now()) / 1000);
+  const rtf = new Intl.RelativeTimeFormat(localeCode[locale], { numeric: "auto" });
+  for (const [unit, secondsInUnit] of RELATIVE_TIME_UNITS) {
+    if (Math.abs(diffSeconds) >= secondsInUnit || unit === "second") {
+      return rtf.format(Math.round(diffSeconds / secondsInUnit), unit);
+    }
+  }
+  return "";
+}

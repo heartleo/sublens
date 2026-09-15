@@ -6,6 +6,7 @@ import { preferencesStore, type Preferences, type ThemeMode } from "../preferenc
 import { providers } from "../providers";
 import { isFreePlan } from "../providers/base";
 import { createLauncher } from "../launcher";
+import { sendMessageWithRetry } from "../runtime/sendMessageWithRetry";
 import { extensionStorage, type ExtensionState } from "../storage";
 import {
   findTool,
@@ -42,28 +43,6 @@ const permissionManager = createPermissionManager(
 
 function resetPopupScroll(): void {
   document.body.scrollTo({ top: 0, left: 0, behavior: "auto" });
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Retries with backoff absorb the "Receiving end does not exist" race when the message wakes a
-// torn-down service worker — an immediate single retry can still land before Windows finishes
-// the cold start, so give it a few spaced attempts before surfacing a failure.
-const RETRY_DELAYS_MS = [0, 150, 400, 800];
-
-async function sendMessageWithRetry<T>(message: unknown): Promise<T> {
-  let lastError: unknown;
-  for (const wait of RETRY_DELAYS_MS) {
-    if (wait > 0) await delay(wait);
-    try {
-      return await chrome.runtime.sendMessage(message);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError;
 }
 
 // Opens tools directly from the popup instead of round-tripping through the background service
@@ -132,6 +111,7 @@ export default function App({ initialPreferences }: AppProps) {
   const [subscriptionsOpen, setSubscriptionsOpen] = useState(false);
   const [pendingProviderId, setPendingProviderId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [refreshingSubscriptions, setRefreshingSubscriptions] = useState(false);
   const [draggingToolId, setDraggingToolId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
     toolId: string;
@@ -215,29 +195,6 @@ export default function App({ initialPreferences }: AppProps) {
     const timeout = window.setTimeout(() => setNotice(""), 3000);
     return () => window.clearTimeout(timeout);
   }, [notice]);
-
-  useEffect(() => {
-    if (!subscriptionsOpen) return;
-
-    let lastRefreshAt = 0;
-    const refreshSubscriptions = async () => {
-      lastRefreshAt = Date.now();
-      try {
-        await sendMessageWithRetry({ type: "refresh" });
-      } catch {
-        return;
-      }
-      await loadRuntimeState();
-    };
-
-    void refreshSubscriptions();
-    const interval = window.setInterval(() => void refreshSubscriptions(), 60_000);
-
-    return () => {
-      window.clearInterval(interval);
-      if (Date.now() - lastRefreshAt > 3000) void refreshSubscriptions();
-    };
-  }, [subscriptionsOpen, loadRuntimeState]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -430,6 +387,33 @@ export default function App({ initialPreferences }: AppProps) {
       setPendingProviderId(null);
     },
     [loadRuntimeState, t.connectionFailed, t.disconnected]
+  );
+
+  const handleRefreshSubscriptions = useCallback(async () => {
+    setRefreshingSubscriptions(true);
+    try {
+      await sendMessageWithRetry({ type: "refresh" });
+      await loadRuntimeState();
+    } catch {
+      setNotice(t.refreshFailed);
+    } finally {
+      setRefreshingSubscriptions(false);
+    }
+  }, [loadRuntimeState, t.refreshFailed]);
+
+  const handleSignIn = useCallback(
+    async (providerId: string) => {
+      try {
+        const result = await sendMessageWithRetry<{ ok: boolean }>({
+          type: "open-provider-login",
+          providerId,
+        });
+        if (!result?.ok) setNotice(t.openFailed);
+      } catch {
+        setNotice(t.openFailed);
+      }
+    },
+    [t.openFailed]
   );
 
   const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -805,12 +789,13 @@ export default function App({ initialPreferences }: AppProps) {
           connections={connections}
           pendingProviderId={pendingProviderId}
           messages={t}
+          locale={locale}
+          refreshing={refreshingSubscriptions}
           onClose={closeSubscriptions}
           onConnect={(providerId) => void handleConnect(providerId)}
           onDisconnect={(providerId) => void handleDisconnect(providerId)}
-          onSignIn={(providerId) =>
-            void chrome.runtime.sendMessage({ type: "open-provider-login", providerId })
-          }
+          onSignIn={(providerId) => void handleSignIn(providerId)}
+          onRefresh={() => void handleRefreshSubscriptions()}
         />
       </I18nContext.Provider>
     </LocaleContext.Provider>

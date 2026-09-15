@@ -87,7 +87,6 @@ Mirrors `docs/privacy.html` §05 — that page is the single source of truth, so
 | Permission | Justification |
 | --- | --- |
 | `storage` | Save favorites, recent launches, usage counts, preferences, and subscription snapshots locally using `chrome.storage.local`. |
-| `alarms` | Schedule a background refresh of subscription data every 15 minutes. |
 | `favicon` (optional) | Show a custom tool's site icon next to its name when the user chooses the favicon icon option while adding it. |
 | Host permissions (optional): `cursor.com`, `github.com`, `chatgpt.com`, `claude.ai` | Make authenticated requests only to the subscription provider the user clicks Connect on, using the browser's existing session for that site. Requested per provider at the moment of connection, not at install. |
 

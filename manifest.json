@@ -3,7 +3,7 @@
   "name": "SubLens",
   "version": "0.2.1",
   "description": "Launch AI tools fast and track connected subscriptions locally.",
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage"],
   "optional_permissions": ["favicon"],
   "optional_host_permissions": [
     "https://cursor.com/*",

@@ -1,5 +1,6 @@
 import type { SubscriptionProvider } from "../../providers";
 import { isFreePlan, type SubscriptionInfo } from "../../providers/base";
+import { formatRelativeTime, type Locale } from "../../i18n";
 import type { LocaleMessages } from "../../i18n/locales/en";
 import { getBuiltInTool } from "../../tools";
 import { ToolLogo } from "../../components/ToolLogo";
@@ -11,10 +12,21 @@ interface SubscriptionPanelProps {
   connections: Record<string, boolean>;
   pendingProviderId: string | null;
   messages: LocaleMessages;
+  locale: Locale;
+  refreshing: boolean;
   onClose(): void;
   onConnect(providerId: string): void;
   onDisconnect(providerId: string): void;
   onSignIn(providerId: string): void;
+  onRefresh(): void;
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M16.023 9.348h4.992v-4.99M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+  );
 }
 
 function AccountStatusIcon({ connected }: { connected: boolean }) {
@@ -38,12 +50,23 @@ export function SubscriptionPanel({
   connections,
   pendingProviderId,
   messages: t,
+  locale,
+  refreshing,
   onClose,
   onConnect,
   onDisconnect,
   onSignIn,
+  onRefresh,
 }: SubscriptionPanelProps) {
   if (!open) return null;
+
+  const anyConnected = providers.some((provider) => connections[provider.id] === true);
+  const latestUpdate = providers.reduce<string | null>((latest, provider) => {
+    if (connections[provider.id] !== true) return latest;
+    const updatedAt = subscriptions[provider.id]?.lastUpdated;
+    if (!updatedAt) return latest;
+    return !latest || updatedAt > latest ? updatedAt : latest;
+  }, null);
 
   return (
     <div className="dialog-layer">
@@ -55,18 +78,42 @@ export function SubscriptionPanel({
         aria-labelledby="subs-title"
       >
         <header className="panel-header">
-          <h2 id="subs-title">{t.subscriptions}</h2>
-          <button
-            autoFocus
-            className="icon-button"
-            type="button"
-            aria-label={t.close}
-            onClick={onClose}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
-          </button>
+          <span className="panel-heading">
+            <h2 id="subs-title">{t.subscriptions}</h2>
+            {anyConnected ? (
+              <small className="panel-updated" role="status" aria-live="polite">
+                {refreshing
+                  ? t.refreshing
+                  : latestUpdate
+                    ? `${t.lastRefreshed} ${formatRelativeTime(latestUpdate, locale)}`
+                    : t.clickToLoad}
+              </small>
+            ) : null}
+          </span>
+          <span className="header-actions">
+            {anyConnected ? (
+              <button
+                className={`icon-button refresh-button${refreshing ? " is-spinning" : ""}`}
+                type="button"
+                aria-label={refreshing ? t.refreshing : t.refresh}
+                disabled={refreshing}
+                onClick={onRefresh}
+              >
+                <RefreshIcon />
+              </button>
+            ) : null}
+            <button
+              autoFocus
+              className="icon-button"
+              type="button"
+              aria-label={t.close}
+              onClick={onClose}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </span>
         </header>
 
         <div className="provider-list">

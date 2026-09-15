@@ -64,6 +64,10 @@ const zh: LocaleMessages = {
   connectionDenied: "未授予权限",
   connectionFailed: "无法更新 Provider 权限",
   openFailed: "打开失败，请重试",
+  refresh: "刷新",
+  refreshing: "正在刷新…",
+  refreshFailed: "刷新订阅失败",
+  lastRefreshed: "更新于",
   working: "处理中…",
   close: "关闭",
 };

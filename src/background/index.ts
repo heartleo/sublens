@@ -2,9 +2,6 @@ import { providers } from "../providers";
 import { isFreePlan, type SubscriptionInfo } from "../providers/base";
 import { extensionStorage } from "../storage";
 
-const ALARM_NAME = "sublens-refresh";
-const REFRESH_INTERVAL_MINUTES = 15;
-
 function swLog(...args: unknown[]): void {
   console.log(`[SW ${new Date().toISOString()}]`, ...args);
 }
@@ -74,16 +71,6 @@ async function refreshConnectedProviders(): Promise<void> {
   }
   await updateBadge();
 }
-
-chrome.alarms.create(ALARM_NAME, { periodInMinutes: REFRESH_INTERVAL_MINUTES });
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === ALARM_NAME) void refreshConnectedProviders().catch((err) => swError("alarm refresh failed", err));
-});
-
-chrome.runtime.onInstalled.addListener(() => {
-  void refreshConnectedProviders().catch((err) => swError("onInstalled refresh failed", err));
-});
 
 chrome.permissions.onRemoved.addListener(() => {
   void updateBadge().catch((err) => swError("badge update failed", err));
